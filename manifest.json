@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "GitHub Issue Creator",
+  "name": "Small-git-issues",
   "version": "1.0",
   "description": "Quickly create GitHub issues from a popup.",
   "permissions": [
