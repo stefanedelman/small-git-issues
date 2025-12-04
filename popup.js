@@ -5,13 +5,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const titleInput = document.getElementById('title');
     const bodyInput = document.getElementById('body');
     const assigneesInput = document.getElementById('assignees');
-    const labelsInput = document.getElementById('labels');
+    const labelsContainer = document.getElementById('labels-container');
     const submitBtn = document.getElementById('submit');
     const statusDiv = document.getElementById('status');
     const themeToggle = document.getElementById('theme-toggle');
     const settingsDetails = document.getElementById('settings-details');
     const saveSettingsBtn = document.getElementById('save-settings');
     const currentRepoDisplay = document.getElementById('current-repo-display');
+
+    let selectedLabels = new Set();
 
     function updateRepoDisplay(owner, repoName) {
         if (owner && repoName) {
@@ -21,20 +23,80 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function fetchLabels(token, owner, repoName) {
+        if (!token || !owner || !repoName) return;
+
+        labelsContainer.innerHTML = '<div class="label-loading">Loading labels...</div>';
+        
+        try {
+            const response = await fetch(`https://api.github.com/repos/${owner}/${repoName}/labels`, {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+
+            if (response.ok) {
+                const labels = await response.json();
+                renderLabels(labels);
+            } else {
+                labelsContainer.innerHTML = '<div class="label-loading">Failed to load labels</div>';
+            }
+        } catch (error) {
+            labelsContainer.innerHTML = `<div class="label-loading">Error: ${error.message}</div>`;
+        }
+    }
+
+    function renderLabels(labels) {
+        labelsContainer.innerHTML = '';
+        if (labels.length === 0) {
+            labelsContainer.innerHTML = '<div class="label-loading">No labels found</div>';
+            return;
+        }
+
+        labels.forEach(label => {
+            const chip = document.createElement('div');
+            chip.className = 'label-chip';
+            chip.textContent = label.name;
+            // Optional: Use label color from GitHub
+            // chip.style.borderLeft = `3px solid #${label.color}`;
+            
+            if (selectedLabels.has(label.name)) {
+                chip.classList.add('selected');
+            }
+
+            chip.addEventListener('click', () => {
+                if (selectedLabels.has(label.name)) {
+                    selectedLabels.delete(label.name);
+                    chip.classList.remove('selected');
+                } else {
+                    selectedLabels.add(label.name);
+                    chip.classList.add('selected');
+                }
+            });
+
+            labelsContainer.appendChild(chip);
+        });
+    }
+
     function showStatus(message, type) {
         statusDiv.innerHTML = message;
         statusDiv.className = type;
     }
 
     // Load saved settings
-    chrome.storage.sync.get(['githubToken', 'githubOwner', 'githubRepoName', 'githubAssignees', 'githubLabels', 'darkMode'], (items) => {
+    chrome.storage.sync.get(['githubToken', 'githubOwner', 'githubRepoName', 'githubAssignees', 'darkMode'], (items) => {
         if (items.githubToken) tokenInput.value = items.githubToken;
         if (items.githubOwner) ownerInput.value = items.githubOwner;
         if (items.githubRepoName) repoNameInput.value = items.githubRepoName;
         if (items.githubAssignees) assigneesInput.value = items.githubAssignees;
-        if (items.githubLabels) labelsInput.value = items.githubLabels;
         
         updateRepoDisplay(items.githubOwner, items.githubRepoName);
+
+        // Fetch labels if we have credentials
+        if (items.githubToken && items.githubOwner && items.githubRepoName) {
+            fetchLabels(items.githubToken, items.githubOwner, items.githubRepoName);
+        }
 
         // Apply Dark Mode
         if (items.darkMode) {
@@ -62,16 +124,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const owner = ownerInput.value.trim();
         const repoName = repoNameInput.value.trim();
         const assigneesRaw = assigneesInput.value;
-        const labelsRaw = labelsInput.value;
 
         chrome.storage.sync.set({
             githubToken: token,
             githubOwner: owner,
             githubRepoName: repoName,
-            githubAssignees: assigneesRaw,
-            githubLabels: labelsRaw
+            githubAssignees: assigneesRaw
         }, () => {
             updateRepoDisplay(owner, repoName);
+            fetchLabels(token, owner, repoName); // Refresh labels on save
             showStatus('Settings saved!', 'success');
             setTimeout(() => {
                 statusDiv.innerHTML = '';
@@ -90,7 +151,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = titleInput.value.trim();
         const body = bodyInput.value.trim();
         const assigneesRaw = assigneesInput.value;
-        const labelsRaw = labelsInput.value;
 
         if (!token || !owner || !repoName || !title) {
             showStatus('Please fill in Token, Owner, Repo Name, and Title.', 'error');
@@ -102,8 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
             githubToken: token,
             githubOwner: owner,
             githubRepoName: repoName,
-            githubAssignees: assigneesRaw,
-            githubLabels: labelsRaw
+            githubAssignees: assigneesRaw
         });
 
         const repo = `${owner}/${repoName}`;
@@ -112,9 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ? assigneesRaw.split(',').map(s => s.trim()).filter(s => s.length > 0) 
             : [];
 
-        const labels = labelsRaw 
-            ? labelsRaw.split(',').map(s => s.trim()).filter(s => s.length > 0) 
-            : [];
+        const labels = Array.from(selectedLabels);
 
         submitBtn.disabled = true;
         showStatus('Creating issue...', 'info');
@@ -134,7 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     labels: labels
                 })
             });
-
             if (response.ok) {
                 const data = await response.json();
                 showStatus(`Issue created successfully! <a href="${data.html_url}" target="_blank">View Issue</a>`, 'success');

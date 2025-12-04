@@ -174,6 +174,45 @@ a {
     color: #0366d6;
     text-decoration: none;
 }
+/* Label Styles */
+.labels-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 5px;
+    min-height: 30px;
+}
+
+.label-chip {
+    background-color: #f0f0f0;
+    border: 1px solid #e1e4e8;
+    border-radius: 2em;
+    padding: 4px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s;
+    color: #586069;
+    font-weight: 500;
+}
+
+.label-chip:hover {
+    background-color: #e1e4e8;
+}
+
+.label-chip.selected {
+    background-color: #0366d6;
+    color: white;
+    border-color: #0366d6;
+}
+
+.label-loading {
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+    padding: 5px 0;
+}
+
 /* Dark Mode Styles */
 body.dark-mode {
     background-color: #2d2d2d;
@@ -213,4 +252,24 @@ body.dark-mode summary {
 
 body.dark-mode #theme-toggle:hover {
     background-color: rgba(255,255,255,0.1);
+}
+
+body.dark-mode .label-chip {
+    background-color: #333;
+    border-color: #444;
+    color: #c9d1d9;
+}
+
+body.dark-mode .label-chip:hover {
+    background-color: #444;
+}
+
+body.dark-mode .label-chip.selected {
+    background-color: #1f6feb;
+    color: white;
+    border-color: #1f6feb;
+}
+
+body.dark-mode .label-loading {
+    color: #8b949e;
 }

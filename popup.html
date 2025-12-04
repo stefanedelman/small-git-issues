@@ -41,19 +41,21 @@
 
     <div class="form-group">
       <label for="body">Body:</label>
-      <textarea id="body" rows="5" placeholder="Describe the issue..."></textarea>
+      <textarea style="resize: vertical;" id="body" rows="5" placeholder="Describe the issue..."></textarea>
     </div>
 
     <details>
       <summary>Advanced Options</summary>
-      <div class="form-group" style="margin-top: 10px;">
+      <div class="form-group">
         <label for="assignees">Assignees (comma separated):</label>
         <input type="text" id="assignees" placeholder="octocat, user2" />
       </div>
 
       <div class="form-group">
-        <label for="labels">Labels (comma separated):</label>
-        <input type="text" id="labels" placeholder="bug, enhancement" />
+        <label>Labels:</label>
+        <div id="labels-container" class="labels-container">
+            <div class="label-loading">Enter Token & Repo to load labels</div>
+        </div>
       </div>
     </details>
 
