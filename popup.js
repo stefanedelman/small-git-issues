@@ -47,6 +47,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function hexToRgb(hex) {
+        var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+        hex = hex.replace(shorthandRegex, function(m, r, g, b) {
+            return r + r + g + g + b + b;
+        });
+
+        var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : null;
+    }
+
     function renderLabels(labels) {
         labelsContainer.innerHTML = '';
         if (labels.length === 0) {
@@ -58,9 +72,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const chip = document.createElement('div');
             chip.className = 'label-chip';
             chip.textContent = label.name;
-            // Optional: Use label color from GitHub
-            // chip.style.borderLeft = `3px solid #${label.color}`;
             
+            // Apply Glassy Style
+            const rgb = hexToRgb(label.color);
+            const color = `#${label.color}`;
+            
+            if (rgb) {
+                chip.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`;
+                chip.style.borderColor = color;
+                chip.style.color = color;
+            }
+            
+            // chip.style.fontWeight = '600'; // Moved to CSS
+
             if (selectedLabels.has(label.name)) {
                 chip.classList.add('selected');
             }

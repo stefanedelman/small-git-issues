@@ -184,26 +184,25 @@ a {
 }
 
 .label-chip {
-    background-color: #f0f0f0;
-    border: 1px solid #e1e4e8;
+    background-color: #f0f0f0; /* Fallback */
+    border: 1px solid #e1e4e8; /* Fallback */
     border-radius: 2em;
     padding: 4px 10px;
     font-size: 11px;
     cursor: pointer;
     user-select: none;
     transition: all 0.2s;
-    color: #586069;
-    font-weight: 500;
+    color: #586069; /* Fallback */
+    font-weight: 600;
 }
 
 .label-chip:hover {
-    background-color: #e1e4e8;
+    filter: brightness(0.95);
 }
 
 .label-chip.selected {
-    background-color: #0366d6;
-    color: white;
-    border-color: #0366d6;
+    box-shadow: 0 0 0 2px currentColor;
+    border-color: transparent !important; /* Hide the thin border, show the thick ring */
 }
 
 .label-loading {
@@ -255,19 +254,20 @@ body.dark-mode #theme-toggle:hover {
 }
 
 body.dark-mode .label-chip {
+    /* Inline styles override these, but keeping for fallback */
     background-color: #333;
     border-color: #444;
     color: #c9d1d9;
 }
 
 body.dark-mode .label-chip:hover {
-    background-color: #444;
+    filter: brightness(1.2);
+    background-color: initial; /* Let inline bg show */
 }
 
 body.dark-mode .label-chip.selected {
-    background-color: #1f6feb;
-    color: white;
-    border-color: #1f6feb;
+    box-shadow: 0 0 0 2px currentColor;
+    border-color: transparent !important;
 }
 
 body.dark-mode .label-loading {
