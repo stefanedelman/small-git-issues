@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>Create GitHub Issue</title>
   <link rel="stylesheet" type="text/css" href="style.css">
 </head>
+
 <body>
   <div class="container">
     <div class="header">
@@ -14,7 +16,7 @@
       <button id="theme-toggle" title="Toggle Dark Mode">&#127769;</button>
     </div>
     <div id="current-repo-display" class="repo-display"></div>
-    
+
     <details id="settings-details" open>
       <summary>Settings (Token & Repo)</summary>
       <div class="form-group" style="margin-top: 10px;">
@@ -41,9 +43,10 @@
 
     <div class="form-group">
       <label for="body">Body:</label>
-      <textarea style="resize: vertical;" id="body" rows="5" placeholder="Describe the issue... (Paste images here)"></textarea>
+      <textarea style="resize: vertical;" id="body" rows="5"
+        placeholder="Describe the issue... (Paste images here)"></textarea>
       <div class="toolbar">
-        <button id="attach-image-btn" class="icon-btn" title="Attach Image">📷 Attach Image</button>
+        <button id="attach-image-btn" class="icon-btn" title="Attach Image"> Attach Image</button>
         <input type="file" id="image-input" accept="image/*" style="display: none;">
         <span id="upload-status" class="upload-status"></span>
       </div>
@@ -59,7 +62,7 @@
       <div class="form-group">
         <label>Labels:</label>
         <div id="labels-container" class="labels-container">
-            <div class="label-loading">Enter Token & Repo to load labels</div>
+          <div class="label-loading">Enter Token & Repo to load labels</div>
         </div>
       </div>
     </details>
@@ -69,4 +72,5 @@
   </div>
   <script src="popup.js"></script>
 </body>
+
 </html>
