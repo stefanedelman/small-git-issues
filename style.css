@@ -274,3 +274,46 @@ body.dark-mode .label-chip.selected {
 body.dark-mode .label-loading {
     color: #8b949e;
 }
+
+/* Toolbar Styles */
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.icon-btn {
+    background: none;
+    border: 1px solid #ddd;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #586069;
+    width: auto; /* Override default button width */
+}
+
+.icon-btn:hover {
+    background-color: #f6f8fa;
+    border-color: #c6cbd1;
+}
+
+.upload-status {
+    font-size: 11px;
+    color: #586069;
+}
+
+/* Dark Mode Toolbar */
+body.dark-mode .icon-btn {
+    border-color: #444;
+    color: #c9d1d9;
+}
+
+body.dark-mode .icon-btn:hover {
+    background-color: #333;
+}
+
+body.dark-mode .upload-status {
+    color: #8b949e;
+}

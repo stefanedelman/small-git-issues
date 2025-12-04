@@ -12,6 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsDetails = document.getElementById('settings-details');
     const saveSettingsBtn = document.getElementById('save-settings');
     const currentRepoDisplay = document.getElementById('current-repo-display');
+    const attachImageBtn = document.getElementById('attach-image-btn');
+    const imageInput = document.getElementById('image-input');
+    const uploadStatus = document.getElementById('upload-status');
 
     let selectedLabels = new Set();
 
@@ -175,6 +178,101 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 1500);
         });
     });
+
+    // Image Upload Logic
+    attachImageBtn.addEventListener('click', () => {
+        imageInput.click();
+    });
+
+    imageInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+            uploadImage(e.target.files[0]);
+        }
+    });
+
+    bodyInput.addEventListener('paste', (e) => {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (let index in items) {
+            const item = items[index];
+            if (item.kind === 'file' && item.type.startsWith('image/')) {
+                const blob = item.getAsFile();
+                uploadImage(blob);
+            }
+        }
+    });
+
+    function readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                // Remove "data:image/png;base64," prefix
+                const base64 = reader.result.split(',')[1];
+                resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function uploadImage(file) {
+        const token = tokenInput.value.trim();
+        const owner = ownerInput.value.trim();
+        const repoName = repoNameInput.value.trim();
+
+        if (!token || !owner || !repoName) {
+            showStatus('Please configure Token, Owner, and Repo first.', 'error');
+            return;
+        }
+
+        uploadStatus.textContent = 'Uploading...';
+        attachImageBtn.disabled = true;
+
+        try {
+            const content = await readFileAsBase64(file);
+            const timestamp = new Date().getTime();
+            // Simple random string to avoid collisions
+            const randomStr = Math.random().toString(36).substring(7);
+            const filename = `issue-images/img-${timestamp}-${randomStr}.png`;
+            
+            const response = await fetch(`https://api.github.com/repos/${owner}/${repoName}/contents/${filename}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: `Upload image ${filename}`,
+                    content: content
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const imageUrl = data.content.download_url;
+                const markdown = `\n![Image](${imageUrl})\n`;
+                
+                // Insert at cursor
+                const startPos = bodyInput.selectionStart;
+                const endPos = bodyInput.selectionEnd;
+                bodyInput.value = bodyInput.value.substring(0, startPos)
+                    + markdown
+                    + bodyInput.value.substring(endPos, bodyInput.value.length);
+                
+                uploadStatus.textContent = 'Uploaded!';
+                setTimeout(() => uploadStatus.textContent = '', 2000);
+            } else {
+                const error = await response.json();
+                uploadStatus.textContent = 'Failed';
+                showStatus(`Upload failed: ${error.message}`, 'error');
+            }
+        } catch (error) {
+            uploadStatus.textContent = 'Error';
+            showStatus(`Upload error: ${error.message}`, 'error');
+        } finally {
+            attachImageBtn.disabled = false;
+            imageInput.value = ''; // Reset
+        }
+    }
 
     submitBtn.addEventListener('click', async () => {
         const token = tokenInput.value.trim();
