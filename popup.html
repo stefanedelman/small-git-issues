@@ -7,9 +7,13 @@
 <body>
   <div class="container">
     <div class="header">
-      <h2>Create Issue</h2>
+      <div class="title-group">
+        <img src="icon.png" class="header-icon" />
+        <h2>small-git-issues</h2>
+      </div>
       <button id="theme-toggle" title="Toggle Dark Mode">&#127769;</button>
     </div>
+    <div id="current-repo-display" class="repo-display"></div>
     
     <details id="settings-details" open>
       <summary>Settings (Token & Repo)</summary>
@@ -27,6 +31,7 @@
         <label for="repoName">Repository Name:</label>
         <input type="text" id="repoName" placeholder="vscode" />
       </div>
+      <button id="save-settings" class="secondary-btn">Save Settings</button>
     </details>
 
     <div class="form-group">
@@ -44,6 +49,11 @@
       <div class="form-group" style="margin-top: 10px;">
         <label for="assignees">Assignees (comma separated):</label>
         <input type="text" id="assignees" placeholder="octocat, user2" />
+      </div>
+
+      <div class="form-group">
+        <label for="labels">Labels (comma separated):</label>
+        <input type="text" id="labels" placeholder="bug, enhancement" />
       </div>
     </details>
 
