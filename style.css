@@ -1,0 +1,178 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    width: 300px;
+    padding: 10px;
+    background-color: #f4f4f4;
+}
+
+.container {
+    background-color: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.header h2 {
+    margin: 0;
+}
+
+#theme-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    width: auto;
+    padding: 5px;
+    color: inherit;
+}
+
+#theme-toggle:hover {
+    background-color: rgba(0,0,0,0.1);
+}
+
+h2 {
+    margin-top: 0;
+    color: #333;
+    font-size: 18px;
+    text-align: center;
+}
+
+.form-group {
+    margin-bottom: 12px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    font-size: 12px;
+    color: #555;
+}
+
+input[type="text"],
+input[type="password"],
+textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box; /* Ensures padding doesn't increase width */
+    font-size: 13px;
+}
+
+input:focus, textarea:focus {
+    border-color: #0366d6;
+    outline: none;
+}
+
+details {
+    margin-bottom: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px;
+    background-color: #fff;
+}
+
+summary {
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    outline: none;
+}
+
+summary:hover {
+    color: #0366d6;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background-color: #2ea44f;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: #2c974b;
+}
+
+button:disabled {
+    background-color: #94d3a2;
+    cursor: not-allowed;
+}
+
+#status {
+    margin-top: 10px;
+    font-size: 12px;
+    text-align: center;
+    word-break: break-word;
+}
+
+.error {
+    color: #cb2431;
+}
+
+.success {
+    color: #2ea44f;
+}
+
+.info {
+    color: #0366d6;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Dark Mode Styles */
+body.dark-mode {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+}
+
+body.dark-mode .container {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+
+body.dark-mode h2 {
+    color: #e0e0e0;
+}
+
+body.dark-mode label {
+    color: #bbb;
+}
+
+body.dark-mode input, 
+body.dark-mode textarea,
+body.dark-mode details {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #444;
+}
+
+body.dark-mode summary {
+    color: #bbb;
+}
+
+body.dark-mode #theme-toggle:hover {
+    background-color: rgba(255,255,255,0.1);
+}

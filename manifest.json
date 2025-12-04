@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "GitHub Issue Creator",
+  "version": "1.0",
+  "description": "Quickly create GitHub issues from a popup.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://api.github.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

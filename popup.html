@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Create GitHub Issue</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Create Issue</h2>
+      <button id="theme-toggle" title="Toggle Dark Mode">&#127769;</button>
+    </div>
+    
+    <details id="settings-details" open>
+      <summary>Settings (Token & Repo)</summary>
+      <div class="form-group" style="margin-top: 10px;">
+        <label for="token">Personal Access Token:</label>
+        <input type="password" id="token" placeholder="ghp_..." />
+      </div>
+
+      <div class="form-group">
+        <label for="owner">Owner (Username/Org):</label>
+        <input type="text" id="owner" placeholder="microsoft" />
+      </div>
+
+      <div class="form-group">
+        <label for="repoName">Repository Name:</label>
+        <input type="text" id="repoName" placeholder="vscode" />
+      </div>
+    </details>
+
+    <div class="form-group">
+      <label for="title">Title:</label>
+      <input type="text" id="title" placeholder="Issue title" />
+    </div>
+
+    <div class="form-group">
+      <label for="body">Body:</label>
+      <textarea id="body" rows="5" placeholder="Describe the issue..."></textarea>
+    </div>
+
+    <details>
+      <summary>Advanced Options</summary>
+      <div class="form-group" style="margin-top: 10px;">
+        <label for="assignees">Assignees (comma separated):</label>
+        <input type="text" id="assignees" placeholder="octocat, user2" />
+      </div>
+    </details>
+
+    <button id="submit">Create Issue</button>
+    <div id="status"></div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
