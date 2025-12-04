@@ -184,15 +184,15 @@ a {
 }
 
 .label-chip {
-    background-color: #f0f0f0; /* Fallback */
-    border: 1px solid #e1e4e8; /* Fallback */
+    background-color: rgba(var(--label-r), var(--label-g), var(--label-b), 0.15);
+    border: 1px solid var(--label-color);
     border-radius: 2em;
     padding: 4px 10px;
     font-size: 11px;
     cursor: pointer;
     user-select: none;
     transition: all 0.2s;
-    color: #586069; /* Fallback */
+    color: var(--label-color);
     font-weight: 600;
 }
 
@@ -201,8 +201,10 @@ a {
 }
 
 .label-chip.selected {
-    box-shadow: 0 0 0 2px currentColor;
-    border-color: transparent !important; /* Hide the thin border, show the thick ring */
+    background-color: var(--label-color);
+    color: var(--label-text-contrast);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    border-color: var(--label-color);
 }
 
 .label-loading {
@@ -255,19 +257,18 @@ body.dark-mode #theme-toggle:hover {
 
 body.dark-mode .label-chip {
     /* Inline styles override these, but keeping for fallback */
-    background-color: #333;
-    border-color: #444;
-    color: #c9d1d9;
+    background-color: rgba(var(--label-r), var(--label-g), var(--label-b), 0.25); /* Slightly more opaque in dark mode */
 }
 
 body.dark-mode .label-chip:hover {
     filter: brightness(1.2);
-    background-color: initial; /* Let inline bg show */
+    background-color: rgba(var(--label-r), var(--label-g), var(--label-b), 0.35);
 }
 
 body.dark-mode .label-chip.selected {
-    box-shadow: 0 0 0 2px currentColor;
-    border-color: transparent !important;
+    background-color: var(--label-color);
+    color: var(--label-text-contrast);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
 
 body.dark-mode .label-loading {

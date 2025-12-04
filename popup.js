@@ -61,6 +61,14 @@ document.addEventListener('DOMContentLoaded', () => {
         } : null;
     }
 
+    function getContrastYIQ(hexcolor){
+        var r = parseInt(hexcolor.substr(0,2),16);
+        var g = parseInt(hexcolor.substr(2,2),16);
+        var b = parseInt(hexcolor.substr(4,2),16);
+        var yiq = ((r*299)+(g*587)+(b*114))/1000;
+        return (yiq >= 128) ? 'black' : 'white';
+    }
+
     function renderLabels(labels) {
         labelsContainer.innerHTML = '';
         if (labels.length === 0) {
@@ -73,17 +81,17 @@ document.addEventListener('DOMContentLoaded', () => {
             chip.className = 'label-chip';
             chip.textContent = label.name;
             
-            // Apply Glassy Style
+            // Apply Styles via CSS Variables
             const rgb = hexToRgb(label.color);
-            const color = `#${label.color}`;
+            const contrast = getContrastYIQ(label.color);
             
             if (rgb) {
-                chip.style.backgroundColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`;
-                chip.style.borderColor = color;
-                chip.style.color = color;
+                chip.style.setProperty('--label-r', rgb.r);
+                chip.style.setProperty('--label-g', rgb.g);
+                chip.style.setProperty('--label-b', rgb.b);
+                chip.style.setProperty('--label-color', `#${label.color}`);
+                chip.style.setProperty('--label-text-contrast', contrast);
             }
-            
-            // chip.style.fontWeight = '600'; // Moved to CSS
 
             if (selectedLabels.has(label.name)) {
                 chip.classList.add('selected');
