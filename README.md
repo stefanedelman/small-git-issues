@@ -7,7 +7,7 @@ A simple and efficient Google Chrome extension that allows you to create GitHub 
 *   **Quick Issue Creation:** Instantly open a popup to draft and submit issues.
 *   **Smart Labels:** Automatically fetches labels from your repository. Select them with a single click using the beautiful, glassy UI.
 *   **Image Attachments:** 
-    *   Click the 📎 paperclip icon to upload images.
+    *   Click the attach image button to upload images.
     *   **Paste support:** Simply paste (Ctrl+V) images directly into the body text area.
     *   Images are automatically uploaded to your repo and embedded as Markdown.
 *   **Dark Mode:** Fully themed dark mode for late-night coding sessions. 🌙
