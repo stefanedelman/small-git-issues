@@ -99,6 +99,21 @@ input:focus, textarea:focus, select:focus {
     outline: none;
 }
 
+.help-text {
+    font-size: 11px;
+    color: #586069;
+    margin-top: 4px;
+}
+
+.help-text a {
+    color: #0366d6;
+    text-decoration: underk ;
+}
+
+.help-text a:hover {
+    text-decoration: underline;
+}
+
 details {
     margin-bottom: 12px;
     border: 1px solid #ddd;
@@ -276,6 +291,14 @@ body.dark-mode .label-loading {
     color: #8b949e;
 }
 
+body.dark-mode .help-text {
+    color: #8b949e;
+}
+
+body.dark-mode .help-text a {
+    color: #58a6ff;
+}
+
 /* Toolbar Styles */
 .toolbar {
     display: flex;
@@ -317,4 +340,21 @@ body.dark-mode .icon-btn:hover {
 
 body.dark-mode .upload-status {
     color: #8b949e;
+}
+
+/* Spinner */
+.spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }

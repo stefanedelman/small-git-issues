@@ -541,6 +541,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Save Settings Button Listener
     saveSettingsBtn.addEventListener('click', () => {
+        const originalText = saveSettingsBtn.textContent;
+        saveSettingsBtn.disabled = true;
+        saveSettingsBtn.innerHTML = '<span class="spinner"></span> Saving...';
+
         const token = tokenInput.value.trim();
         const owner = ownerInput.value.trim();
         const repoFull = repoNameInput.value;
@@ -558,13 +562,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetchLabels(token, rOwner, rName);
             }
             showStatus('Settings saved!', 'success');
+            
             setTimeout(() => {
+                saveSettingsBtn.innerHTML = originalText;
+                saveSettingsBtn.disabled = false;
                 statusDiv.innerHTML = '';
                 // Optional: Collapse settings if they are valid
                 if (token && repoFull) {
                     settingsDetails.removeAttribute('open');
                 }
-            }, 1500);
+            }, 1000);
         });
     });
 

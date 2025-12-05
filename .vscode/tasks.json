@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "append_css",
+			"type": "shell",
+			"command": "echo \"/* Spinner */\n.spinner {\n    display: inline-block;\n    width: 12px;\n    height: 12px;\n    border: 2px solid rgba(255,255,255,0.3);\n    border-radius: 50%;\n    border-top-color: #fff;\n    animation: spin 1s ease-in-out infinite;\n    margin-right: 5px;\n    vertical-align: middle;\n}\n\n@keyframes spin {\n    to { transform: rotate(360deg); }\n}\" >> \"c:\\Users\\stefan\\Desktop\\small git issues extension\\style.css\"",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}
