@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusDiv = document.getElementById('status');
     const themeToggle = document.getElementById('theme-toggle');
     const settingsDetails = document.getElementById('settings-details');
+    const advancedOptionsDetails = document.getElementById('advanced-options-details');
     const saveSettingsBtn = document.getElementById('save-settings');
     const currentRepoDisplay = document.getElementById('current-repo-display');
     const attachImageBtn = document.getElementById('attach-image-btn');
@@ -283,7 +284,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateRepoDisplay(owner, repoName) {
         if (owner && repoName) {
-            currentRepoDisplay.textContent = `${owner}/${repoName}`;
+            currentRepoDisplay.innerHTML = `
+                <div>${owner}/${repoName}</div>
+                <a href="https://github.com/${owner}/${repoName}" target="_blank" class="repo-link">Open in new tab &#8599;</a>
+            `;
         } else {
             currentRepoDisplay.textContent = 'No repository selected';
         }
@@ -372,6 +376,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const nameSpan = document.createElement('span');
             nameSpan.textContent = user.login;
+
+            if (selectedAssignees.has(user.login)) {
+                checkbox.checked = true;
+                option.classList.add('selected');
+            }
 
             option.appendChild(checkbox);
             option.appendChild(avatar);
@@ -478,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Load saved settings
-    chrome.storage.sync.get(['githubToken', 'githubOwner', 'githubRepoName', 'githubAssignees', 'darkMode'], (items) => {
+    chrome.storage.sync.get(['githubToken', 'githubOwner', 'githubRepoName', 'githubAssignees', 'darkMode', 'advancedOptionsOpen'], (items) => {
         if (items.githubToken) tokenInput.value = items.githubToken;
         if (items.githubOwner) ownerInput.value = items.githubOwner;
         if (items.githubAssignees) {
@@ -520,6 +529,11 @@ document.addEventListener('DOMContentLoaded', () => {
             themeToggle.innerHTML = '&#9728;&#65039;'; // Sun icon
         }
 
+        // Restore Advanced Options State
+        if (items.advancedOptionsOpen) {
+            advancedOptionsDetails.open = true;
+        }
+
         // Auto-collapse settings if configured
         if (items.githubToken && items.githubRepoName) {
             settingsDetails.removeAttribute('open');
@@ -529,6 +543,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (items.githubToken) {
             fetchRepositories(items.githubToken, items.githubOwner);
         }
+    });
+
+    // Save Advanced Options State
+    advancedOptionsDetails.addEventListener('toggle', () => {
+        chrome.storage.sync.set({ advancedOptionsOpen: advancedOptionsDetails.open });
     });
 
     // Theme Toggle Listener
