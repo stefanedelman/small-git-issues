@@ -26,13 +26,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Toggle Dropdown
     repoSelectTrigger.addEventListener('click', () => {
         if (repoSelectTrigger.classList.contains('disabled')) return;
-        repoSelectDropdown.style.display = repoSelectDropdown.style.display === 'none' ? 'block' : 'none';
+        const isClosed = repoSelectDropdown.style.display === 'none';
+        repoSelectDropdown.style.display = isClosed ? 'block' : 'none';
+        if (isClosed) {
+            repoSelectTrigger.classList.add('is-open');
+        } else {
+            repoSelectTrigger.classList.remove('is-open');
+        }
     });
 
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
         if (!repoSelectTrigger.contains(e.target) && !repoSelectDropdown.contains(e.target)) {
             repoSelectDropdown.style.display = 'none';
+            repoSelectTrigger.classList.remove('is-open');
         }
     });
 
@@ -178,6 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     repoNameInput.value = fullRepo;
                     repoSelectText.textContent = repo.name;
                     repoSelectDropdown.style.display = 'none';
+                    repoSelectTrigger.classList.remove('is-open');
                     
                     // Trigger change logic
                     const [rOwner, rName] = fullRepo.split('/');
