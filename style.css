@@ -375,3 +375,27 @@ body.dark-mode .upload-status {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+.footer-help {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 11px;
+}
+
+.footer-help a {
+    color: #586069;
+    text-decoration: none;
+}
+
+.footer-help a:hover {
+    color: #0366d6;
+    text-decoration: underline;
+}
+
+body.dark-mode .footer-help a {
+    color: #8b949e;
+}
+
+body.dark-mode .footer-help a:hover {
+    color: #58a6ff;
+}
