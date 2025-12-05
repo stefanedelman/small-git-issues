@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveSettingsBtn = document.getElementById('save-settings');
     const currentRepoDisplay = document.getElementById('current-repo-display');
     const attachImageBtn = document.getElementById('attach-image-btn');
+    const clearDraftBtn = document.getElementById('clear-draft-btn');
     const imageInput = document.getElementById('image-input');
     const uploadStatus = document.getElementById('upload-status');
     
@@ -34,6 +35,40 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedAssignees = new Set();
     let allFetchedRepos = [];
     let allStarredIds = new Set();
+
+    // --- Autosave & Draft Logic ---
+    chrome.storage.local.get(['draftTitle', 'draftBody'], (items) => {
+        if (items.draftTitle) titleInput.value = items.draftTitle;
+        if (items.draftBody) bodyInput.value = items.draftBody;
+    });
+
+    function saveDraft() {
+        chrome.storage.local.set({
+            draftTitle: titleInput.value,
+            draftBody: bodyInput.value
+        });
+    }
+
+    titleInput.addEventListener('input', saveDraft);
+    bodyInput.addEventListener('input', saveDraft);
+
+    clearDraftBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to clear the title and body?')) {
+            titleInput.value = '';
+            bodyInput.value = '';
+            saveDraft();
+        }
+    });
+
+    // Keyboard Shortcut (Ctrl/Cmd + Enter)
+    function handleShortcut(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            submitBtn.click();
+        }
+    }
+    titleInput.addEventListener('keydown', handleShortcut);
+    bodyInput.addEventListener('keydown', handleShortcut);
+    // ------------------------------
 
     // Toggle Dropdown
     repoSelectTrigger.addEventListener('click', () => {
@@ -738,6 +773,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showStatus(`Issue created successfully! <a href="${data.html_url}" target="_blank">View Issue</a>`, 'success');
                 titleInput.value = '';
                 bodyInput.value = '';
+                saveDraft(); // Clear draft in storage
             } else {
                 const errorData = await response.json();
                 if (response.status === 404) {

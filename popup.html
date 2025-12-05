@@ -65,6 +65,7 @@
         placeholder="Describe the issue... (Paste images here)"></textarea>
       <div class="toolbar">
         <button id="attach-image-btn" class="icon-btn" title="Attach Image"> Attach Image</button>
+        <button id="clear-draft-btn" class="icon-btn" title="Clear Title & Body">Clear Draft</button>
         <input type="file" id="image-input" accept="image/*" style="display: none;">
         <span id="upload-status" class="upload-status"></span>
       </div>
@@ -97,6 +98,7 @@
     </details>
 
     <button id="submit">Create Issue</button>
+    <div class="shortcut-hint">Press Ctrl + Enter to submit</div>
     <div id="status"></div>
   </div>
   <script src="popup.js"></script>

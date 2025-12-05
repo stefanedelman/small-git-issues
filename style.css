@@ -299,6 +299,17 @@ body.dark-mode .help-text a {
     color: #58a6ff;
 }
 
+.shortcut-hint {
+    font-size: 11px;
+    color: #586069;
+    text-align: center;
+    margin-top: 4px;
+}
+
+body.dark-mode .shortcut-hint {
+    color: #8b949e;
+}
+
 /* Toolbar Styles */
 .toolbar {
     display: flex;
