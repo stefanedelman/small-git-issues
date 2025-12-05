@@ -16,8 +16,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const imageInput = document.getElementById('image-input');
     const loadReposBtn = document.getElementById('load-repos-btn');
     const uploadStatus = document.getElementById('upload-status');
+    
+    // Custom Select Elements
+    const repoSelectTrigger = document.getElementById('repo-select-trigger');
+    const repoSelectText = document.getElementById('repo-select-text');
+    const repoSelectDropdown = document.getElementById('repo-select-dropdown');
 
     let selectedLabels = new Set();
+
+    // Toggle Dropdown
+    repoSelectTrigger.addEventListener('click', () => {
+        if (repoSelectTrigger.classList.contains('disabled')) return;
+        repoSelectDropdown.style.display = repoSelectDropdown.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!repoSelectTrigger.contains(e.target) && !repoSelectDropdown.contains(e.target)) {
+            repoSelectDropdown.style.display = 'none';
+        }
+    });
 
     loadReposBtn.addEventListener('click', () => {
         const token = tokenInput.value.trim();
@@ -31,8 +49,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        repoNameInput.innerHTML = '<option>Loading...</option>';
-        repoNameInput.disabled = true;
+        repoSelectText.textContent = 'Loading...';
+        repoSelectTrigger.classList.add('disabled');
+        repoSelectDropdown.innerHTML = ''; // Clear previous options
 
         try {
             // 1. Identify the authenticated user
@@ -62,6 +81,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const baseUrl = isAuthUser 
                 ? 'https://api.github.com/user/repos'
                 : `https://api.github.com/users/${owner}/repos`;
+
+            // Start fetching starred repos in parallel
+            const starredPromise = fetch('https://api.github.com/user/starred?per_page=100', {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            }).then(res => res.ok ? res.json() : []).catch(() => []);
 
             while (hasMore && page <= 5) { // Limit to 5 pages (500 repos)
                 let url = `${baseUrl}?sort=updated&per_page=${perPage}&page=${page}`;
@@ -97,19 +124,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            populateRepoSelect(allRepos);
+            const starredRepos = await starredPromise;
+            const starredIds = new Set(starredRepos.map(r => r.id));
+
+            populateRepoSelect(allRepos, starredIds);
             showStatus(`Loaded ${allRepos.length} repositories for ${isAuthUser ? authLogin : owner}.`, 'success');
 
         } catch (error) {
             showStatus(`Failed to load repos: ${error.message}`, 'error');
-            repoNameInput.innerHTML = '<option value="" disabled selected>Select a repository</option>';
+            repoSelectText.textContent = 'Error loading repos';
         } finally {
-            repoNameInput.disabled = false;
+            repoSelectTrigger.classList.remove('disabled');
         }
     }
 
-    function populateRepoSelect(repos) {
-        repoNameInput.innerHTML = '<option value="" disabled selected>Select a repository</option>';
+    function populateRepoSelect(repos, starredIds = new Set()) {
+        repoSelectDropdown.innerHTML = '';
         
         const grouped = {};
         repos.forEach(repo => {
@@ -119,18 +149,41 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         Object.keys(grouped).sort().forEach(owner => {
-            const group = document.createElement('optgroup');
-            group.label = owner;
+            const groupLabel = document.createElement('div');
+            groupLabel.className = 'select-group-label';
+            groupLabel.textContent = owner;
+            repoSelectDropdown.appendChild(groupLabel);
             
             grouped[owner].sort((a, b) => a.name.localeCompare(b.name)).forEach(repo => {
-                const option = document.createElement('option');
-                option.value = `${repo.owner.login}/${repo.name}`;
-                option.textContent = repo.name;
-                group.appendChild(option);
+                const option = document.createElement('div');
+                option.className = 'select-option';
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = repo.name;
+                option.appendChild(nameSpan);
+
+                if (starredIds.has(repo.id)) {
+                    // Add SVG Star
+                    option.innerHTML += `<svg viewBox="0 0 16 16" width="14" height="14" class="star-icon"><path fill-rule="evenodd" d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.719-4.192-3.046-2.97a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"></path></svg>`;
+                }
+
+                option.addEventListener('click', () => {
+                    const fullRepo = `${repo.owner.login}/${repo.name}`;
+                    repoNameInput.value = fullRepo;
+                    repoSelectText.textContent = repo.name;
+                    repoSelectDropdown.style.display = 'none';
+                    
+                    // Trigger change logic
+                    const [rOwner, rName] = fullRepo.split('/');
+                    updateRepoDisplay(rOwner, rName);
+                    fetchLabels(tokenInput.value.trim(), rOwner, rName);
+                });
+                
+                repoSelectDropdown.appendChild(option);
             });
-            
-            repoNameInput.appendChild(group);
         });
+        
+        repoSelectText.textContent = 'Select a repository';
     }
 
     repoNameInput.addEventListener('change', () => {
@@ -262,12 +315,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 [owner, repo] = repo.split('/');
             }
 
-            // Add this option to the select so it's selected
-            const option = document.createElement('option');
-            option.value = fullRepoValue;
-            option.textContent = repo;
-            option.selected = true;
-            repoNameInput.appendChild(option);
+            // Update Custom Select UI
+            repoNameInput.value = fullRepoValue;
+            repoSelectText.textContent = repo;
 
             updateRepoDisplay(owner, repo);
             

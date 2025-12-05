@@ -4,6 +4,7 @@
 <head>
   <title>Create GitHub Issue</title>
   <link rel="stylesheet" type="text/css" href="style.css">
+  <link rel="stylesheet" type="text/css" href="custom-select.css">
 </head>
 
 <body>
@@ -34,9 +35,16 @@
 
       <div class="form-group">
         <label for="repoName">Repository Name:</label>
-        <select id="repoName">
-          <option value="" disabled selected>Select a repository</option>
-        </select>
+        <div class="custom-select-container">
+          <div id="repo-select-trigger" class="select-trigger">
+            <span id="repo-select-text">Select a repository</span>
+            <span class="arrow">▼</span>
+          </div>
+          <div id="repo-select-dropdown" class="select-dropdown" style="display: none;">
+            <!-- Options will be populated here -->
+          </div>
+        </div>
+        <input type="hidden" id="repoName" />
       </div>
       <button id="save-settings" class="secondary-btn">Save Settings</button>
     </details>
