@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentRepoDisplay = document.getElementById('current-repo-display');
     const attachImageBtn = document.getElementById('attach-image-btn');
     const imageInput = document.getElementById('image-input');
-    const loadReposBtn = document.getElementById('load-repos-btn');
     const uploadStatus = document.getElementById('upload-status');
     
     // Custom Select Elements
@@ -37,10 +36,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    loadReposBtn.addEventListener('click', () => {
+    // Auto-load repos when owner changes
+    ownerInput.addEventListener('blur', () => {
         const token = tokenInput.value.trim();
         const owner = ownerInput.value.trim();
-        fetchRepositories(token, owner);
+        if (token) {
+            fetchRepositories(token, owner);
+        }
     });
 
     async function fetchRepositories(token, owner) {
@@ -68,6 +70,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const userData = await userRes.json();
             const authLogin = userData.login;
+
+            if (!owner) {
+                ownerInput.value = authLogin;
+            }
 
             // 2. Determine if we are fetching for the auth user or someone else
             // If owner is empty OR matches the authenticated user, use /user/repos
@@ -183,7 +189,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-        repoSelectText.textContent = 'Select a repository';
+        const currentVal = repoNameInput.value;
+        if (currentVal && currentVal.includes('/')) {
+             const [, currentRepo] = currentVal.split('/');
+             repoSelectText.textContent = currentRepo;
+        } else {
+             repoSelectText.textContent = 'Select a repository';
+        }
     }
 
     repoNameInput.addEventListener('change', () => {
@@ -335,6 +347,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Auto-collapse settings if configured
         if (items.githubToken && items.githubRepoName) {
             settingsDetails.removeAttribute('open');
+        }
+
+        // Auto-load repos if token is present
+        if (items.githubToken) {
+            fetchRepositories(items.githubToken, items.githubOwner);
         }
     });
 
