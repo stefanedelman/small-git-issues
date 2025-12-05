@@ -26,12 +26,17 @@
 
       <div class="form-group">
         <label for="owner">Owner (Username/Org):</label>
-        <input type="text" id="owner" placeholder="microsoft" />
+        <div style="display: flex; gap: 5px;">
+          <input type="text" id="owner" placeholder="Leave empty for your repos" />
+          <button id="load-repos-btn" type="button" class="secondary-btn" style="width: auto; margin-bottom: 0;">Load</button>
+        </div>
       </div>
 
       <div class="form-group">
         <label for="repoName">Repository Name:</label>
-        <input type="text" id="repoName" placeholder="vscode" />
+        <select id="repoName">
+          <option value="" disabled selected>Select a repository</option>
+        </select>
       </div>
       <button id="save-settings" class="secondary-btn">Save Settings</button>
     </details>

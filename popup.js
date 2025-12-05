@@ -14,9 +14,133 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentRepoDisplay = document.getElementById('current-repo-display');
     const attachImageBtn = document.getElementById('attach-image-btn');
     const imageInput = document.getElementById('image-input');
+    const loadReposBtn = document.getElementById('load-repos-btn');
     const uploadStatus = document.getElementById('upload-status');
 
     let selectedLabels = new Set();
+
+    loadReposBtn.addEventListener('click', () => {
+        const token = tokenInput.value.trim();
+        const owner = ownerInput.value.trim();
+        fetchRepositories(token, owner);
+    });
+
+    async function fetchRepositories(token, owner) {
+        if (!token) {
+            showStatus('Please enter a Personal Access Token first.', 'error');
+            return;
+        }
+
+        repoNameInput.innerHTML = '<option>Loading...</option>';
+        repoNameInput.disabled = true;
+
+        try {
+            // 1. Identify the authenticated user
+            const userRes = await fetch('https://api.github.com/user', {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            if (!userRes.ok) {
+                throw new Error('Invalid Token or Network Error');
+            }
+            
+            const userData = await userRes.json();
+            const authLogin = userData.login;
+
+            // 2. Determine if we are fetching for the auth user or someone else
+            // If owner is empty OR matches the authenticated user, use /user/repos
+            const isAuthUser = !owner || (owner.toLowerCase() === authLogin.toLowerCase());
+
+            let allRepos = [];
+            let page = 1;
+            const perPage = 100;
+            let hasMore = true;
+
+            const baseUrl = isAuthUser 
+                ? 'https://api.github.com/user/repos'
+                : `https://api.github.com/users/${owner}/repos`;
+
+            while (hasMore && page <= 5) { // Limit to 5 pages (500 repos)
+                let url = `${baseUrl}?sort=updated&per_page=${perPage}&page=${page}`;
+                
+                if (isAuthUser) {
+                    // visibility=all ensures private repos are included
+                    // affiliation ensures we get repos we own, collaborate on, or have org access to
+                    url += '&visibility=all&affiliation=owner,collaborator,organization_member';
+                }
+
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+
+                if (response.ok) {
+                    const repos = await response.json();
+                    if (repos.length === 0) {
+                        hasMore = false;
+                    } else {
+                        allRepos = allRepos.concat(repos);
+                        if (repos.length < perPage) {
+                            hasMore = false;
+                        } else {
+                            page++;
+                        }
+                    }
+                } else {
+                    const err = await response.json();
+                    throw new Error(err.message);
+                }
+            }
+
+            populateRepoSelect(allRepos);
+            showStatus(`Loaded ${allRepos.length} repositories for ${isAuthUser ? authLogin : owner}.`, 'success');
+
+        } catch (error) {
+            showStatus(`Failed to load repos: ${error.message}`, 'error');
+            repoNameInput.innerHTML = '<option value="" disabled selected>Select a repository</option>';
+        } finally {
+            repoNameInput.disabled = false;
+        }
+    }
+
+    function populateRepoSelect(repos) {
+        repoNameInput.innerHTML = '<option value="" disabled selected>Select a repository</option>';
+        
+        const grouped = {};
+        repos.forEach(repo => {
+            const owner = repo.owner.login;
+            if (!grouped[owner]) grouped[owner] = [];
+            grouped[owner].push(repo);
+        });
+
+        Object.keys(grouped).sort().forEach(owner => {
+            const group = document.createElement('optgroup');
+            group.label = owner;
+            
+            grouped[owner].sort((a, b) => a.name.localeCompare(b.name)).forEach(repo => {
+                const option = document.createElement('option');
+                option.value = `${repo.owner.login}/${repo.name}`;
+                option.textContent = repo.name;
+                group.appendChild(option);
+            });
+            
+            repoNameInput.appendChild(group);
+        });
+    }
+
+    repoNameInput.addEventListener('change', () => {
+        const val = repoNameInput.value;
+        if (val) {
+            const [owner, repo] = val.split('/');
+            updateRepoDisplay(owner, repo);
+            fetchLabels(tokenInput.value.trim(), owner, repo);
+        }
+    });
 
     function updateRepoDisplay(owner, repoName) {
         if (owner && repoName) {
@@ -123,14 +247,33 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.sync.get(['githubToken', 'githubOwner', 'githubRepoName', 'githubAssignees', 'darkMode'], (items) => {
         if (items.githubToken) tokenInput.value = items.githubToken;
         if (items.githubOwner) ownerInput.value = items.githubOwner;
-        if (items.githubRepoName) repoNameInput.value = items.githubRepoName;
         if (items.githubAssignees) assigneesInput.value = items.githubAssignees;
         
-        updateRepoDisplay(items.githubOwner, items.githubRepoName);
+        // Handle Repo Select
+        if (items.githubRepoName) {
+            let owner = items.githubOwner;
+            let repo = items.githubRepoName;
+            let fullRepoValue = items.githubRepoName;
 
-        // Fetch labels if we have credentials
-        if (items.githubToken && items.githubOwner && items.githubRepoName) {
-            fetchLabels(items.githubToken, items.githubOwner, items.githubRepoName);
+            // Handle legacy or split format
+            if (!repo.includes('/') && owner) {
+                fullRepoValue = `${owner}/${repo}`;
+            } else if (repo.includes('/')) {
+                [owner, repo] = repo.split('/');
+            }
+
+            // Add this option to the select so it's selected
+            const option = document.createElement('option');
+            option.value = fullRepoValue;
+            option.textContent = repo;
+            option.selected = true;
+            repoNameInput.appendChild(option);
+
+            updateRepoDisplay(owner, repo);
+            
+            if (items.githubToken) {
+                fetchLabels(items.githubToken, owner, repo);
+            }
         }
 
         // Apply Dark Mode
@@ -140,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Auto-collapse settings if configured
-        if (items.githubToken && items.githubOwner && items.githubRepoName) {
+        if (items.githubToken && items.githubRepoName) {
             settingsDetails.removeAttribute('open');
         }
     });
@@ -157,22 +300,25 @@ document.addEventListener('DOMContentLoaded', () => {
     saveSettingsBtn.addEventListener('click', () => {
         const token = tokenInput.value.trim();
         const owner = ownerInput.value.trim();
-        const repoName = repoNameInput.value.trim();
+        const repoFull = repoNameInput.value;
         const assigneesRaw = assigneesInput.value;
 
         chrome.storage.sync.set({
             githubToken: token,
             githubOwner: owner,
-            githubRepoName: repoName,
+            githubRepoName: repoFull,
             githubAssignees: assigneesRaw
         }, () => {
-            updateRepoDisplay(owner, repoName);
-            fetchLabels(token, owner, repoName); // Refresh labels on save
+            if (repoFull) {
+                const [rOwner, rName] = repoFull.split('/');
+                updateRepoDisplay(rOwner, rName);
+                fetchLabels(token, rOwner, rName);
+            }
             showStatus('Settings saved!', 'success');
             setTimeout(() => {
                 statusDiv.innerHTML = '';
                 // Optional: Collapse settings if they are valid
-                if (token && owner && repoName) {
+                if (token && repoFull) {
                     settingsDetails.removeAttribute('open');
                 }
             }, 1500);
@@ -216,11 +362,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function uploadImage(file) {
         const token = tokenInput.value.trim();
-        const owner = ownerInput.value.trim();
-        const repoName = repoNameInput.value.trim();
+        const repoFull = repoNameInput.value;
 
-        if (!token || !owner || !repoName) {
-            showStatus('Please configure Token, Owner, and Repo first.', 'error');
+        if (!token || !repoFull) {
+            showStatus('Please configure Token and Repo first.', 'error');
             return;
         }
 
@@ -234,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const randomStr = Math.random().toString(36).substring(7);
             const filename = `issue-images/img-${timestamp}-${randomStr}.png`;
             
-            const response = await fetch(`https://api.github.com/repos/${owner}/${repoName}/contents/${filename}`, {
+            const response = await fetch(`https://api.github.com/repos/${repoFull}/contents/${filename}`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `token ${token}`,
@@ -277,13 +422,13 @@ document.addEventListener('DOMContentLoaded', () => {
     submitBtn.addEventListener('click', async () => {
         const token = tokenInput.value.trim();
         const owner = ownerInput.value.trim();
-        const repoName = repoNameInput.value.trim();
+        const repoFull = repoNameInput.value;
         const title = titleInput.value.trim();
         const body = bodyInput.value.trim();
         const assigneesRaw = assigneesInput.value;
 
-        if (!token || !owner || !repoName || !title) {
-            showStatus('Please fill in Token, Owner, Repo Name, and Title.', 'error');
+        if (!token || !repoFull || !title) {
+            showStatus('Please fill in Token, Repo Name, and Title.', 'error');
             return;
         }
 
@@ -291,11 +436,9 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.storage.sync.set({
             githubToken: token,
             githubOwner: owner,
-            githubRepoName: repoName,
+            githubRepoName: repoFull,
             githubAssignees: assigneesRaw
         });
-
-        const repo = `${owner}/${repoName}`;
 
         const assignees = assigneesRaw 
             ? assigneesRaw.split(',').map(s => s.trim()).filter(s => s.length > 0) 
@@ -307,7 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showStatus('Creating issue...', 'info');
 
         try {
-            const response = await fetch(`https://api.github.com/repos/${repo}/issues`, {
+            const response = await fetch(`https://api.github.com/repos/${repoFull}/issues`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `token ${token}`,

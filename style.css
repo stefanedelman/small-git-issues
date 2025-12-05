@@ -84,7 +84,8 @@ label {
 
 input[type="text"],
 input[type="password"],
-textarea {
+textarea,
+select {
     width: 100%;
     padding: 8px;
     border: 1px solid #ddd;
@@ -93,7 +94,7 @@ textarea {
     font-size: 13px;
 }
 
-input:focus, textarea:focus {
+input:focus, textarea:focus, select:focus {
     border-color: #0366d6;
     outline: none;
 }
