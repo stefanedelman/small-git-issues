@@ -40,7 +40,10 @@
             </svg>
           </div>
           <div id="repo-select-dropdown" class="select-dropdown" style="display: none;">
-            <!-- Options will be populated here -->
+            <div class="select-search-container">
+              <input type="text" id="repo-search" class="select-search" placeholder="Search repositories..." autocomplete="off">
+            </div>
+            <div id="repo-options-list"></div>
           </div>
         </div>
         <input type="hidden" id="repoName" />

@@ -20,8 +20,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const repoSelectTrigger = document.getElementById('repo-select-trigger');
     const repoSelectText = document.getElementById('repo-select-text');
     const repoSelectDropdown = document.getElementById('repo-select-dropdown');
+    const repoSearchInput = document.getElementById('repo-search');
+    const repoOptionsList = document.getElementById('repo-options-list');
 
     let selectedLabels = new Set();
+    let allFetchedRepos = [];
+    let allStarredIds = new Set();
 
     // Toggle Dropdown
     repoSelectTrigger.addEventListener('click', () => {
@@ -30,9 +34,25 @@ document.addEventListener('DOMContentLoaded', () => {
         repoSelectDropdown.style.display = isClosed ? 'block' : 'none';
         if (isClosed) {
             repoSelectTrigger.classList.add('is-open');
+            repoSearchInput.focus();
         } else {
             repoSelectTrigger.classList.remove('is-open');
         }
+    });
+
+    // Search Repos
+    repoSearchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const filtered = allFetchedRepos.filter(repo => 
+            repo.name.toLowerCase().includes(query) || 
+            repo.owner.login.toLowerCase().includes(query)
+        );
+        renderRepoOptions(filtered, allStarredIds);
+    });
+
+    // Prevent closing when clicking search
+    repoSearchInput.addEventListener('click', (e) => {
+        e.stopPropagation();
     });
 
     // Close dropdown when clicking outside
@@ -60,7 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         repoSelectText.textContent = 'Loading...';
         repoSelectTrigger.classList.add('disabled');
-        repoSelectDropdown.innerHTML = ''; // Clear previous options
+        repoOptionsList.innerHTML = '<div class="select-option" style="color: #586069; cursor: default;">Loading repositories...</div>';
+        repoSearchInput.value = ''; // Clear search
 
         try {
             // 1. Identify the authenticated user
@@ -138,9 +159,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const starredRepos = await starredPromise;
-            const starredIds = new Set(starredRepos.map(r => r.id));
+            allStarredIds = new Set(starredRepos.map(r => r.id));
+            allFetchedRepos = allRepos;
 
-            populateRepoSelect(allRepos, starredIds);
+            renderRepoOptions(allRepos, allStarredIds);
             showStatus(`Loaded ${allRepos.length} repositories for ${isAuthUser ? authLogin : owner}.`, 'success');
 
         } catch (error) {
@@ -151,9 +173,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function populateRepoSelect(repos, starredIds = new Set()) {
-        repoSelectDropdown.innerHTML = '';
+    function renderRepoOptions(repos, starredIds = new Set()) {
+        repoOptionsList.innerHTML = '';
         
+        if (repos.length === 0) {
+            const noResults = document.createElement('div');
+            noResults.style.padding = '8px 12px';
+            noResults.style.color = '#586069';
+            noResults.style.fontSize = '13px';
+            noResults.textContent = 'No repositories found';
+            repoOptionsList.appendChild(noResults);
+            return;
+        }
+
         const grouped = {};
         repos.forEach(repo => {
             const owner = repo.owner.login;
@@ -165,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const groupLabel = document.createElement('div');
             groupLabel.className = 'select-group-label';
             groupLabel.textContent = owner;
-            repoSelectDropdown.appendChild(groupLabel);
+            repoOptionsList.appendChild(groupLabel);
             
             grouped[owner].sort((a, b) => a.name.localeCompare(b.name)).forEach(repo => {
                 const option = document.createElement('div');
@@ -193,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     fetchLabels(tokenInput.value.trim(), rOwner, rName);
                 });
                 
-                repoSelectDropdown.appendChild(option);
+                repoOptionsList.appendChild(option);
             });
         });
         
