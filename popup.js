@@ -23,7 +23,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const repoSearchInput = document.getElementById('repo-search');
     const repoOptionsList = document.getElementById('repo-options-list');
 
+    // Assignee Select Elements
+    const assigneeSelectTrigger = document.getElementById('assignee-select-trigger');
+    const assigneeSelectText = document.getElementById('assignee-select-text');
+    const assigneeSelectDropdown = document.getElementById('assignee-select-dropdown');
+    const assigneeOptionsList = document.getElementById('assignee-options-list');
+
     let selectedLabels = new Set();
+    let selectedAssignees = new Set();
     let allFetchedRepos = [];
     let allStarredIds = new Set();
 
@@ -35,8 +42,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isClosed) {
             repoSelectTrigger.classList.add('is-open');
             repoSearchInput.focus();
+            assigneeSelectDropdown.style.display = 'none'; // Close other dropdown
+            assigneeSelectTrigger.classList.remove('is-open');
         } else {
             repoSelectTrigger.classList.remove('is-open');
+        }
+    });
+
+    // Toggle Assignee Dropdown
+    assigneeSelectTrigger.addEventListener('click', () => {
+        if (assigneeSelectTrigger.classList.contains('disabled')) return;
+        const isClosed = assigneeSelectDropdown.style.display === 'none';
+        assigneeSelectDropdown.style.display = isClosed ? 'block' : 'none';
+        if (isClosed) {
+            assigneeSelectTrigger.classList.add('is-open');
+            repoSelectDropdown.style.display = 'none'; // Close other dropdown
+            repoSelectTrigger.classList.remove('is-open');
+        } else {
+            assigneeSelectTrigger.classList.remove('is-open');
         }
     });
 
@@ -60,6 +83,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!repoSelectTrigger.contains(e.target) && !repoSelectDropdown.contains(e.target)) {
             repoSelectDropdown.style.display = 'none';
             repoSelectTrigger.classList.remove('is-open');
+        }
+        if (!assigneeSelectTrigger.contains(e.target) && !assigneeSelectDropdown.contains(e.target)) {
+            assigneeSelectDropdown.style.display = 'none';
+            assigneeSelectTrigger.classList.remove('is-open');
         }
     });
 
@@ -223,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const [rOwner, rName] = fullRepo.split('/');
                     updateRepoDisplay(rOwner, rName);
                     fetchLabels(tokenInput.value.trim(), rOwner, rName);
+                    fetchAssignees(tokenInput.value.trim(), rOwner, rName);
                 });
                 
                 repoOptionsList.appendChild(option);
@@ -243,7 +271,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (val) {
             const [owner, repo] = val.split('/');
             updateRepoDisplay(owner, repo);
+            
+            // Clear previous selections when changing repo
+            selectedAssignees.clear();
+            updateAssigneeText();
+            
             fetchLabels(tokenInput.value.trim(), owner, repo);
+            fetchAssignees(tokenInput.value.trim(), owner, repo);
         }
     });
 
@@ -277,6 +311,101 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             labelsContainer.innerHTML = `<div class="label-loading">Error: ${error.message}</div>`;
         }
+    }
+
+    async function fetchAssignees(token, owner, repoName) {
+        if (!token || !owner || !repoName) return;
+
+        assigneeSelectText.textContent = 'Loading...';
+        assigneeOptionsList.innerHTML = '';
+        
+        try {
+            const response = await fetch(`https://api.github.com/repos/${owner}/${repoName}/assignees`, {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+
+            if (response.ok) {
+                const assignees = await response.json();
+                renderAssignees(assignees);
+            } else {
+                assigneeSelectText.textContent = 'Failed to load';
+            }
+        } catch (error) {
+            assigneeSelectText.textContent = 'Error loading';
+        }
+    }
+
+    function renderAssignees(assignees) {
+        assigneeOptionsList.innerHTML = '';
+        assigneeSelectText.textContent = 'Select assignees';
+
+        if (assignees.length === 0) {
+            const noResults = document.createElement('div');
+            noResults.style.padding = '8px 12px';
+            noResults.style.color = '#586069';
+            noResults.style.fontSize = '13px';
+            noResults.textContent = 'No assignees found';
+            assigneeOptionsList.appendChild(noResults);
+            return;
+        }
+
+        assignees.forEach(user => {
+            const option = document.createElement('div');
+            option.className = 'select-option';
+            
+            // Checkbox-like appearance
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.style.marginRight = '8px';
+            checkbox.style.pointerEvents = 'none'; // Let the div handle click
+            
+            const avatar = document.createElement('img');
+            avatar.src = user.avatar_url;
+            avatar.style.width = '20px';
+            avatar.style.height = '20px';
+            avatar.style.borderRadius = '50%';
+            avatar.style.marginRight = '8px';
+            avatar.style.verticalAlign = 'middle';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = user.login;
+
+            option.appendChild(checkbox);
+            option.appendChild(avatar);
+            option.appendChild(nameSpan);
+
+            option.addEventListener('click', () => {
+                if (selectedAssignees.has(user.login)) {
+                    selectedAssignees.delete(user.login);
+                    checkbox.checked = false;
+                    option.classList.remove('selected');
+                } else {
+                    selectedAssignees.add(user.login);
+                    checkbox.checked = true;
+                    option.classList.add('selected');
+                }
+                updateAssigneeText();
+            });
+            
+            assigneeOptionsList.appendChild(option);
+        });
+        
+        updateAssigneeText();
+    }
+
+    function updateAssigneeText() {
+        const count = selectedAssignees.size;
+        if (count === 0) {
+            assigneeSelectText.textContent = 'Select assignees';
+        } else if (count === 1) {
+            assigneeSelectText.textContent = Array.from(selectedAssignees)[0];
+        } else {
+            assigneeSelectText.textContent = `${count} assignees selected`;
+        }
+        assigneesInput.value = Array.from(selectedAssignees).join(', ');
     }
 
     function hexToRgb(hex) {
@@ -352,7 +481,13 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.sync.get(['githubToken', 'githubOwner', 'githubRepoName', 'githubAssignees', 'darkMode'], (items) => {
         if (items.githubToken) tokenInput.value = items.githubToken;
         if (items.githubOwner) ownerInput.value = items.githubOwner;
-        if (items.githubAssignees) assigneesInput.value = items.githubAssignees;
+        if (items.githubAssignees) {
+            assigneesInput.value = items.githubAssignees;
+            items.githubAssignees.split(',').map(s => s.trim()).forEach(s => {
+                if (s) selectedAssignees.add(s);
+            });
+            updateAssigneeText();
+        }
         
         // Handle Repo Select
         if (items.githubRepoName) {
@@ -375,6 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (items.githubToken) {
                 fetchLabels(items.githubToken, owner, repo);
+                fetchAssignees(items.githubToken, owner, repo);
             }
         }
 
