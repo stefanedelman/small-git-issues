@@ -701,7 +701,7 @@ body.dark-mode .issue-loading {
     flex: 1;
     overflow-y: auto;
     min-height: 0;
-    max-height: 400px;
+    max-height: 380px;
 }
 
 .issue-detail-title-row {

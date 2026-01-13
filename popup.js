@@ -52,9 +52,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let allStarredIds = new Set();
 
     // Issues View State
-    let allFetchedIssues = [];
+    let allFetchedIssues = [];  // Filtered view
+    let masterIssuesCache = []; // All issues (open + closed)
     let issuesPage = 1;
     let hasMoreIssues = true;
+    let lastFetchedState = null; // Track what state we last fetched
 
     // View Toggle Elements
     const tabCreate = document.getElementById('tab-create');
@@ -132,10 +134,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (view === 'issues') {
             issuesView.style.display = 'block';
             tabIssues.classList.add('active');
-            // Fetch issues when switching to issues view
+            // Only fetch issues if we don't have cached data
             const repoFull = repoNameInput.value;
-            if (repoFull) {
+            if (repoFull && allFetchedIssues.length === 0) {
                 fetchIssues(true);
+            } else if (repoFull && allFetchedIssues.length > 0) {
+                // Just render the cached issues
+                renderIssuesList();
             }
         } else if (view === 'settings') {
             settingsView.style.display = 'block';
@@ -261,12 +266,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Issues Fetching Logic ---
-    async function fetchIssues(reset = false) {
+    function filterIssuesFromCache(state) {
+        if (state === 'all') {
+            return [...masterIssuesCache];
+        }
+        return masterIssuesCache.filter(issue => issue.state === state);
+    }
+
+    async function fetchIssues(reset = false, forceRefresh = false) {
         const token = tokenInput.value.trim();
         const repoFull = repoNameInput.value;
 
         if (!token || !repoFull) {
             issuesList.innerHTML = '<div class="issues-placeholder">Please configure Token and Repository first</div>';
+            return;
+        }
+
+        const state = issuesStateFilter.value;
+
+        // If we have cached data and just changing filter (not forcing refresh), filter client-side
+        if (!forceRefresh && masterIssuesCache.length > 0 && lastFetchedState === 'all') {
+            allFetchedIssues = filterIssuesFromCache(state);
+            renderIssuesList();
             return;
         }
 
@@ -276,13 +297,14 @@ document.addEventListener('DOMContentLoaded', () => {
             hasMoreIssues = true;
         }
 
-        const state = issuesStateFilter.value;
         issuesList.innerHTML = '<div class="issue-loading">Loading issues...</div>';
         loadMoreIssuesBtn.style.display = 'none';
 
         try {
+            // Always fetch 'all' to enable client-side filtering
+            const fetchState = 'all';
             const response = await fetch(
-                `https://api.github.com/repos/${repoFull}/issues?state=${state}&per_page=25&page=${issuesPage}`,
+                `https://api.github.com/repos/${repoFull}/issues?state=${fetchState}&per_page=50&page=${issuesPage}`,
                 {
                     headers: {
                         'Authorization': `token ${token}`,
@@ -297,12 +319,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const actualIssues = issues.filter(issue => !issue.pull_request);
                 
                 if (reset) {
-                    allFetchedIssues = actualIssues;
+                    masterIssuesCache = actualIssues;
                 } else {
-                    allFetchedIssues = allFetchedIssues.concat(actualIssues);
+                    masterIssuesCache = masterIssuesCache.concat(actualIssues);
                 }
+                lastFetchedState = 'all';
 
-                hasMoreIssues = issues.length === 25;
+                // Apply current filter
+                allFetchedIssues = filterIssuesFromCache(state);
+                hasMoreIssues = issues.length === 50;
                 renderIssuesList();
             } else {
                 const error = await response.json();
@@ -637,7 +662,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 newCommentInput.value = '';
                 closeConfirm.style.display = 'none';
                 closeIssueDetail();
-                fetchIssues(true); // Refresh issues list
+                
+                // Optimistic update: update both master cache and filtered view
+                const cachedIssue = masterIssuesCache.find(i => i.number === issueNumber);
+                if (cachedIssue) {
+                    cachedIssue.state = 'closed';
+                }
+                // If viewing only open issues, remove from filtered list
+                if (issuesStateFilter.value === 'open') {
+                    allFetchedIssues = allFetchedIssues.filter(i => i.number !== issueNumber);
+                } else {
+                    const filteredIssue = allFetchedIssues.find(i => i.number === issueNumber);
+                    if (filteredIssue) {
+                        filteredIssue.state = 'closed';
+                    }
+                }
+                renderIssuesList();
             } else {
                 const error = await response.json();
                 alert('Failed to close issue: ' + error.message);
@@ -654,11 +694,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---------------------------------
 
     // Issues event listeners
-    issuesStateFilter.addEventListener('change', () => fetchIssues(true));
-    refreshIssuesBtn.addEventListener('click', () => fetchIssues(true));
+    issuesStateFilter.addEventListener('change', () => {
+        // Try client-side filtering first, only fetch if no cache
+        if (masterIssuesCache.length > 0) {
+            allFetchedIssues = filterIssuesFromCache(issuesStateFilter.value);
+            renderIssuesList();
+        } else {
+            fetchIssues(true);
+        }
+    });
+    refreshIssuesBtn.addEventListener('click', () => fetchIssues(true, true)); // Force refresh from API
     loadMoreIssuesBtn.addEventListener('click', () => {
         issuesPage++;
-        fetchIssues(false);
+        fetchIssues(false, true);
     });
     // ----------------------------
 
@@ -904,16 +952,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const [owner, repo] = val.split('/');
             updateRepoDisplay(owner, repo);
             
-            // Clear previous selections when changing repo
+            // Clear previous selections and caches when changing repo
             selectedAssignees.clear();
             updateAssigneeText();
+            masterIssuesCache = [];
+            allFetchedIssues = [];
+            lastFetchedState = null;
             
             fetchLabels(tokenInput.value.trim(), owner, repo);
             fetchAssignees(tokenInput.value.trim(), owner, repo);
             
             // Refresh issues if in issues view
             if (issuesView.style.display !== 'none') {
-                fetchIssues(true);
+                fetchIssues(true, true);
             }
         }
     });
@@ -1396,6 +1447,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 titleInput.value = '';
                 bodyInput.value = '';
                 saveDraft(); // Clear draft in storage
+                
+                // Optimistic update: add the new issue to master cache and filtered view
+                masterIssuesCache.unshift(data);
+                if (issuesStateFilter.value === 'open' || issuesStateFilter.value === 'all') {
+                    allFetchedIssues.unshift(data);
+                }
+                if (issuesView.style.display !== 'none') {
+                    renderIssuesList();
+                }
             } else {
                 const errorData = await response.json();
                 if (response.status === 404) {
