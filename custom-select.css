@@ -174,3 +174,11 @@ body.dark-mode .select-dropdown::-webkit-scrollbar-thumb {
 body.dark-mode .select-dropdown::-webkit-scrollbar-thumb:hover {
     background-color: #484f58;
 }
+
+/* Dropdown opens upward */
+.select-dropdown.dropdown-up {
+    top: auto;
+    bottom: 100%;
+    margin-top: 0;
+    margin-bottom: 4px;
+}

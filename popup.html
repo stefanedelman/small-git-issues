@@ -2,6 +2,7 @@
 <html>
 
 <head>
+  <meta charset="utf-8">
   <title>Create GitHub Issue</title>
   <link rel="stylesheet" type="text/css" href="style.css">
   <link rel="stylesheet" type="text/css" href="custom-select.css">
@@ -18,49 +19,26 @@
     </div>
     <div id="current-repo-display" class="repo-display"></div>
 
-    <details id="settings-details" open>
-      <summary>Settings (Token & Repo)</summary>
-      <div class="form-group" style="margin-top: 10px;">
-        <label for="token">Personal Access Token:</label>
-        <input type="password" id="token" placeholder="ghp_..." />
-        <div class="help-text">
-          <a href="https://github.com/settings/tokens" target="_blank">Generate a token here</a> (needs 'repo' scope)
-        </div>
-      </div>
+    <div class="view-tabs">
+      <button id="tab-create" class="tab-btn active">Create</button>
+      <button id="tab-issues" class="tab-btn">Issues</button>
+      <button id="tab-settings" class="tab-btn">Settings</button>
+    </div>
 
-      <div class="form-group">
-        <label for="owner">Owner (Username/Org):</label>
-        <input type="text" id="owner" placeholder="Leave empty for your repos" />
-      </div>
-
-      <div class="form-group">
-        <label for="repoName">Repository Name:</label>
-        <div class="custom-select-container">
-          <div id="repo-select-trigger" class="select-trigger">
-            <span id="repo-select-text">Select a repository</span>
-            <svg class="arrow" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
-              <path d="M12.78 6.22a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L3.22 7.28a.75.75 0 0 1 1.06-1.06L8 9.94l3.72-3.72a.75.75 0 0 1 1.06 0Z"></path>
-            </svg>
-          </div>
-          <div id="repo-select-dropdown" class="select-dropdown" style="display: none;">
-            <div class="select-search-container">
-              <input type="text" id="repo-search" class="select-search" placeholder="Search repositories..." autocomplete="off">
-            </div>
-            <div id="repo-options-list"></div>
-          </div>
-        </div>
-        <input type="hidden" id="repoName" />
-      </div>
-      <button id="save-settings" class="secondary-btn">Save Settings</button>
-    </details>
-
+    <!-- CREATE ISSUE VIEW -->
+    <div id="create-view">
     <div class="form-group">
       <label for="title">Title:</label>
       <input type="text" id="title" placeholder="Issue title" />
     </div>
 
     <div class="form-group">
-      <label for="body">Body:</label>
+      <label for="body">
+        Body:
+        <br>
+        Warning about adding images
+        <span class="info-icon" id="image-help-icon">i</span>
+      </label>
       <textarea style="resize: vertical;" id="body" rows="5"
         placeholder="Describe the issue... (Paste images here)"></textarea>
       <div class="toolbar">
@@ -102,6 +80,133 @@
     <div id="status"></div>
     <div class="footer-help">
       <a href="https://github.com/stefanedelman/small-git-issues" target="_blank">Need help?</a>
+    </div>
+    </div>
+
+    <!-- VIEW ISSUES VIEW -->
+    <div id="issues-view" style="display: none;">
+      <div class="issues-panel-container">
+        <!-- Issue Detail Panel -->
+        <div id="issue-detail-panel" class="issue-detail-panel">
+          <div class="issue-detail-header">
+            <a id="issue-github-link" href="#" target="_blank" class="icon-btn">Open on GitHub &#x2197;</a>
+            <button id="close-issue-detail" class="icon-btn btn-danger">Back &#x2192;</button>
+          </div>
+          <div id="issue-detail-content" class="issue-detail-content">
+            <!-- Issue details loaded here -->
+          </div>
+          <div class="issue-comment-form">
+            <textarea id="new-comment-input" rows="3" placeholder="Write a comment..."></textarea>
+            <div class="comment-form-actions">
+              <button id="submit-comment-btn" class="secondary-btn">Comment</button>
+              <button id="close-issue-btn" class="btn-danger" style="display: none;">Close with comment</button>
+            </div>
+            <div id="close-confirm" class="close-confirm" style="display: none;">
+              <div class="close-confirm-text">Close this issue?</div>
+              <button id="confirm-close-btn" class="btn-danger small">Close</button>
+              <button id="cancel-close-btn" class="secondary-btn small">Cancel</button>
+            </div>
+          </div>
+        </div>
+        <!-- Issues List Panel -->
+        <div id="issues-list-panel" class="issues-list-panel">
+          <div class="issues-toolbar">
+            <select id="issues-state-filter">
+              <option value="open">Open</option>
+              <option value="closed">Closed</option>
+              <option value="all">All</option>
+            </select>
+            <button id="refresh-issues-btn" class="icon-btn" title="Refresh Issues">&#x21BB; Refresh</button>
+          </div>
+          <div id="issues-list" class="issues-list">
+            <div class="issues-placeholder">Select a repository to view issues</div>
+          </div>
+          <button id="load-more-issues" class="secondary-btn" style="display: none;">Load More Issues</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS VIEW -->
+    <div id="settings-view" style="display: none;">
+      <div class="form-group">
+        <label for="token">Personal Access Token:</label>
+        <input type="password" id="token" placeholder="ghp_..." />
+        <div class="help-text">
+          <a href="https://github.com/settings/tokens" target="_blank">Generate a token here</a> (needs 'repo' scope)
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="owner">Owner (Username/Org):</label>
+        <input type="text" id="owner" placeholder="Leave empty for your repos" />
+      </div>
+
+      <div class="form-group">
+        <label for="repoName">Repository Name:</label>
+        <div class="custom-select-container">
+          <div id="repo-select-trigger" class="select-trigger">
+            <span id="repo-select-text">Select a repository</span>
+            <svg class="arrow" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+              <path d="M12.78 6.22a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L3.22 7.28a.75.75 0 0 1 1.06-1.06L8 9.94l3.72-3.72a.75.75 0 0 1 1.06 0Z"></path>
+            </svg>
+          </div>
+          <div id="repo-select-dropdown" class="select-dropdown" style="display: none;">
+            <div class="select-search-container">
+              <input type="text" id="repo-search" class="select-search" placeholder="Search repositories..." autocomplete="off">
+            </div>
+            <div id="repo-options-list"></div>
+          </div>
+        </div>
+        <input type="hidden" id="repoName" />
+      </div>
+      <button id="save-settings" class="secondary-btn">Save Settings</button>
+
+      <div class="settings-divider"></div>
+      <div class="settings-section-title">Image Upload Settings (Optional)</div>
+      <div class="help-text" style="margin-bottom: 10px;">Configure a dedicated repo for image uploads to avoid commits in your main repo.</div>
+      
+      <div class="form-group">
+        <label for="image-token">Image Upload Token (optional):</label>
+        <input type="password" id="image-token" placeholder="Leave empty to use main token" />
+      </div>
+
+      <div class="form-group">
+        <label for="image-repo">Image Repo:</label>
+        <span>Note: This repo must be <b>public</b></span>
+        <div class="custom-select-container">
+          <div id="image-repo-select-trigger" class="select-trigger">
+            <span id="image-repo-select-text">Select image repository</span>
+            <svg class="arrow" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+              <path d="M12.78 6.22a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L3.22 7.28a.75.75 0 0 1 1.06-1.06L8 9.94l3.72-3.72a.75.75 0 0 1 1.06 0Z"></path>
+            </svg>
+          </div>
+          <div id="image-repo-select-dropdown" class="select-dropdown dropdown-up" style="display: none;">
+            <div class="select-search-container">
+              <input type="text" id="image-repo-search" class="select-search" placeholder="Search repositories..." autocomplete="off">
+            </div>
+            <div id="image-repo-options-list"></div>
+          </div>
+        </div>
+        <input type="hidden" id="image-repo" />
+        <div class="help-text">Select a repo dedicated to storing images</div>
+      </div>
+      <button id="save-image-settings" class="secondary-btn">Save Settings</button>
+    </div>
+
+    <!-- Image Info Modal -->
+    <div id="image-info-modal" class="modal-overlay" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">Image Upload Info</div>
+        <div class="modal-body">
+          <p>When you paste or attach images, they create a commit in your repository making clutter.</p>
+          <p style="margin-top: 8px;">To avoid cluttering your main project repo with image commits, you can configure a <strong>dedicated image repository</strong> in Settings.</p>
+          <p style="margin-top: 8px;">This keeps your project history clean while still hosting images on GitHub.</p>
+        </div>
+        <div class="modal-actions">
+          <button id="modal-go-settings" class="secondary-btn small">Go to Settings</button>
+          <button id="modal-close" class="icon-btn">Close</button>
+        </div>
+      </div>
     </div>
   </div>
   <script src="popup.js"></script>

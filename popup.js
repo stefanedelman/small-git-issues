@@ -9,14 +9,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitBtn = document.getElementById('submit');
     const statusDiv = document.getElementById('status');
     const themeToggle = document.getElementById('theme-toggle');
-    const settingsDetails = document.getElementById('settings-details');
     const advancedOptionsDetails = document.getElementById('advanced-options-details');
     const saveSettingsBtn = document.getElementById('save-settings');
+    const saveImageSettingsBtn = document.getElementById('save-image-settings');
     const currentRepoDisplay = document.getElementById('current-repo-display');
     const attachImageBtn = document.getElementById('attach-image-btn');
     const clearDraftBtn = document.getElementById('clear-draft-btn');
     const imageInput = document.getElementById('image-input');
     const uploadStatus = document.getElementById('upload-status');
+    const imageTokenInput = document.getElementById('image-token');
+    const imageRepoInput = document.getElementById('image-repo');
+
+    // Image Repo Select Elements
+    const imageRepoSelectTrigger = document.getElementById('image-repo-select-trigger');
+    const imageRepoSelectText = document.getElementById('image-repo-select-text');
+    const imageRepoSelectDropdown = document.getElementById('image-repo-select-dropdown');
+    const imageRepoSearchInput = document.getElementById('image-repo-search');
+    const imageRepoOptionsList = document.getElementById('image-repo-options-list');
+
+    // Modal Elements
+    const imageInfoModal = document.getElementById('image-info-modal');
+    const imageHelpIcon = document.getElementById('image-help-icon');
+    const modalGoSettings = document.getElementById('modal-go-settings');
+    const modalClose = document.getElementById('modal-close');
     
     // Custom Select Elements
     const repoSelectTrigger = document.getElementById('repo-select-trigger');
@@ -35,6 +50,37 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedAssignees = new Set();
     let allFetchedRepos = [];
     let allStarredIds = new Set();
+
+    // Issues View State
+    let allFetchedIssues = [];
+    let issuesPage = 1;
+    let hasMoreIssues = true;
+
+    // View Toggle Elements
+    const tabCreate = document.getElementById('tab-create');
+    const tabIssues = document.getElementById('tab-issues');
+    const tabSettings = document.getElementById('tab-settings');
+    const createView = document.getElementById('create-view');
+    const issuesView = document.getElementById('issues-view');
+    const settingsView = document.getElementById('settings-view');
+    const issuesStateFilter = document.getElementById('issues-state-filter');
+    const refreshIssuesBtn = document.getElementById('refresh-issues-btn');
+    const issuesList = document.getElementById('issues-list');
+    const loadMoreIssuesBtn = document.getElementById('load-more-issues');
+    const issueDetailPanel = document.getElementById('issue-detail-panel');
+    const issuesListPanel = document.getElementById('issues-list-panel');
+    const closeIssueDetailBtn = document.getElementById('close-issue-detail');
+    const issueDetailContent = document.getElementById('issue-detail-content');
+    const issueGithubLink = document.getElementById('issue-github-link');
+    const newCommentInput = document.getElementById('new-comment-input');
+    const submitCommentBtn = document.getElementById('submit-comment-btn');
+    const closeIssueBtn = document.getElementById('close-issue-btn');
+    const closeConfirm = document.getElementById('close-confirm');
+    const confirmCloseBtn = document.getElementById('confirm-close-btn');
+    const cancelCloseBtn = document.getElementById('cancel-close-btn');
+
+    let currentOpenIssue = null; // Track currently open issue
+    let restoredActiveTab = 'create';
 
     // --- Autosave & Draft Logic ---
     chrome.storage.local.get(['draftTitle', 'draftBody'], (items) => {
@@ -69,6 +115,552 @@ document.addEventListener('DOMContentLoaded', () => {
     titleInput.addEventListener('keydown', handleShortcut);
     bodyInput.addEventListener('keydown', handleShortcut);
     // ------------------------------
+
+    // --- View Toggle Logic ---
+    function switchView(view, saveToStorage = true) {
+        // Hide all views
+        createView.style.display = 'none';
+        issuesView.style.display = 'none';
+        settingsView.style.display = 'none';
+        tabCreate.classList.remove('active');
+        tabIssues.classList.remove('active');
+        tabSettings.classList.remove('active');
+
+        if (view === 'create') {
+            createView.style.display = 'block';
+            tabCreate.classList.add('active');
+        } else if (view === 'issues') {
+            issuesView.style.display = 'block';
+            tabIssues.classList.add('active');
+            // Fetch issues when switching to issues view
+            const repoFull = repoNameInput.value;
+            if (repoFull) {
+                fetchIssues(true);
+            }
+        } else if (view === 'settings') {
+            settingsView.style.display = 'block';
+            tabSettings.classList.add('active');
+        }
+        if (saveToStorage) {
+            chrome.storage.local.set({ activeTab: view });
+        }
+    }
+
+    tabCreate.addEventListener('click', () => switchView('create'));
+    tabIssues.addEventListener('click', () => switchView('issues'));
+    tabSettings.addEventListener('click', () => switchView('settings'));
+
+    // --- Modal Logic ---
+    imageHelpIcon.addEventListener('click', () => {
+        imageInfoModal.style.display = 'flex';
+    });
+
+    modalClose.addEventListener('click', () => {
+        imageInfoModal.style.display = 'none';
+    });
+
+    modalGoSettings.addEventListener('click', () => {
+        imageInfoModal.style.display = 'none';
+        switchView('settings');
+    });
+
+    imageInfoModal.addEventListener('click', (e) => {
+        if (e.target === imageInfoModal) {
+            imageInfoModal.style.display = 'none';
+        }
+    });
+    // -------------------
+
+    // --- Image Repo Select Logic ---
+    imageRepoSelectTrigger.addEventListener('click', () => {
+        const isClosed = imageRepoSelectDropdown.style.display === 'none';
+        imageRepoSelectDropdown.style.display = isClosed ? 'block' : 'none';
+        if (isClosed) {
+            imageRepoSelectTrigger.classList.add('is-open');
+            // Close other dropdowns
+            repoSelectDropdown.style.display = 'none';
+            repoSelectTrigger.classList.remove('is-open');
+            assigneeSelectDropdown.style.display = 'none';
+            assigneeSelectTrigger.classList.remove('is-open');
+            renderImageRepoOptions(allFetchedRepos);
+        } else {
+            imageRepoSelectTrigger.classList.remove('is-open');
+        }
+    });
+
+    imageRepoSearchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const filtered = allFetchedRepos.filter(repo => 
+            repo.name.toLowerCase().includes(query) || 
+            repo.owner.login.toLowerCase().includes(query)
+        );
+        renderImageRepoOptions(filtered);
+    });
+
+    imageRepoSearchInput.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+
+    function renderImageRepoOptions(repos) {
+        imageRepoOptionsList.innerHTML = '';
+        
+        if (repos.length === 0) {
+            const noResults = document.createElement('div');
+            noResults.style.padding = '8px 12px';
+            noResults.style.color = '#586069';
+            noResults.style.fontSize = '13px';
+            noResults.textContent = 'No repositories found';
+            imageRepoOptionsList.appendChild(noResults);
+            return;
+        }
+
+        const grouped = {};
+        repos.forEach(repo => {
+            const owner = repo.owner.login;
+            if (!grouped[owner]) grouped[owner] = [];
+            grouped[owner].push(repo);
+        });
+
+        Object.keys(grouped).sort().forEach(owner => {
+            const groupLabel = document.createElement('div');
+            groupLabel.className = 'select-group-label';
+            groupLabel.textContent = owner;
+            imageRepoOptionsList.appendChild(groupLabel);
+            
+            grouped[owner].sort((a, b) => a.name.localeCompare(b.name)).forEach(repo => {
+                const option = document.createElement('div');
+                option.className = 'select-option';
+                option.textContent = repo.name;
+
+                option.addEventListener('click', () => {
+                    const fullRepo = `${repo.owner.login}/${repo.name}`;
+                    imageRepoInput.value = fullRepo;
+                    imageRepoSelectText.textContent = repo.name;
+                    imageRepoSelectDropdown.style.display = 'none';
+                    imageRepoSelectTrigger.classList.remove('is-open');
+                });
+                
+                imageRepoOptionsList.appendChild(option);
+            });
+        });
+        
+        const currentVal = imageRepoInput.value;
+        if (currentVal && currentVal.includes('/')) {
+             const [, currentRepo] = currentVal.split('/');
+             imageRepoSelectText.textContent = currentRepo;
+        }
+    }
+    // -------------------------------
+
+    // Restore active tab from storage
+    chrome.storage.local.get(['activeTab'], (items) => {
+        if (items.activeTab) {
+            restoredActiveTab = items.activeTab;
+            switchView(items.activeTab, false);
+        }
+    });
+
+    // --- Issues Fetching Logic ---
+    async function fetchIssues(reset = false) {
+        const token = tokenInput.value.trim();
+        const repoFull = repoNameInput.value;
+
+        if (!token || !repoFull) {
+            issuesList.innerHTML = '<div class="issues-placeholder">Please configure Token and Repository first</div>';
+            return;
+        }
+
+        if (reset) {
+            issuesPage = 1;
+            allFetchedIssues = [];
+            hasMoreIssues = true;
+        }
+
+        const state = issuesStateFilter.value;
+        issuesList.innerHTML = '<div class="issue-loading">Loading issues...</div>';
+        loadMoreIssuesBtn.style.display = 'none';
+
+        try {
+            const response = await fetch(
+                `https://api.github.com/repos/${repoFull}/issues?state=${state}&per_page=25&page=${issuesPage}`,
+                {
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                }
+            );
+
+            if (response.ok) {
+                const issues = await response.json();
+                // Filter out pull requests (GitHub API returns PRs in issues endpoint)
+                const actualIssues = issues.filter(issue => !issue.pull_request);
+                
+                if (reset) {
+                    allFetchedIssues = actualIssues;
+                } else {
+                    allFetchedIssues = allFetchedIssues.concat(actualIssues);
+                }
+
+                hasMoreIssues = issues.length === 25;
+                renderIssuesList();
+            } else {
+                const error = await response.json();
+                issuesList.innerHTML = `<div class="issues-placeholder">Error: ${error.message}</div>`;
+            }
+        } catch (error) {
+            issuesList.innerHTML = `<div class="issues-placeholder">Network error: ${error.message}</div>`;
+        }
+    }
+
+    function renderIssuesList() {
+        if (allFetchedIssues.length === 0) {
+            issuesList.innerHTML = '<div class="issues-placeholder">No issues found</div>';
+            loadMoreIssuesBtn.style.display = 'none';
+            return;
+        }
+
+        issuesList.innerHTML = '';
+        
+        allFetchedIssues.forEach(issue => {
+            const item = document.createElement('div');
+            item.className = 'issue-item';
+            
+            const stateIcon = issue.state === 'open' 
+                ? `<svg class="issue-state-icon open" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                     <path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"></path>
+                     <path fill-rule="evenodd" d="M8 0a8 8 0 100 16A8 8 0 008 0zM1.5 8a6.5 6.5 0 1113 0 6.5 6.5 0 01-13 0z"></path>
+                   </svg>`
+                : `<svg class="issue-state-icon closed" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                     <path d="M11.28 6.78a.75.75 0 00-1.06-1.06L7.25 8.69 5.78 7.22a.75.75 0 00-1.06 1.06l2 2a.75.75 0 001.06 0l3.5-3.5z"></path>
+                     <path fill-rule="evenodd" d="M16 8A8 8 0 110 8a8 8 0 0116 0zm-1.5 0a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"></path>
+                   </svg>`;
+
+            // Build labels HTML
+            let labelsHtml = '';
+            if (issue.labels && issue.labels.length > 0) {
+                labelsHtml = '<div class="issue-labels">';
+                issue.labels.forEach(label => {
+                    const contrast = getContrastYIQ(label.color);
+                    labelsHtml += `<span class="issue-label" style="background-color: #${label.color}; color: ${contrast};">${label.name}</span>`;
+                });
+                labelsHtml += '</div>';
+            }
+
+            const timeAgo = getTimeAgo(new Date(issue.created_at));
+            
+            item.innerHTML = `
+                <div class="issue-header">
+                    ${stateIcon}
+                    <div class="issue-content">
+                        <div class="issue-title">${escapeHtml(issue.title)}</div>
+                        <div class="issue-meta">#${issue.number} opened ${timeAgo} by ${issue.user.login}</div>
+                        ${labelsHtml}
+                    </div>
+                </div>
+            `;
+
+            item.addEventListener('click', () => openIssueDetail(issue));
+            issuesList.appendChild(item);
+        });
+
+        loadMoreIssuesBtn.style.display = hasMoreIssues ? 'block' : 'none';
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function getTimeAgo(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+        
+        const intervals = {
+            year: 31536000,
+            month: 2592000,
+            week: 604800,
+            day: 86400,
+            hour: 3600,
+            minute: 60
+        };
+        
+        for (const [unit, secondsInUnit] of Object.entries(intervals)) {
+            const interval = Math.floor(seconds / secondsInUnit);
+            if (interval >= 1) {
+                return interval === 1 ? `1 ${unit} ago` : `${interval} ${unit}s ago`;
+            }
+        }
+        
+        return 'just now';
+    }
+
+    // --- Issue Detail Panel Logic ---
+    function openIssueDetail(issue) {
+        currentOpenIssue = issue;
+        issueDetailPanel.classList.add('open');
+        issuesListPanel.classList.add('detail-open');
+        issueGithubLink.href = issue.html_url;
+        newCommentInput.value = '';
+        closeConfirm.style.display = 'none';
+        // Show close button only for open issues
+        closeIssueBtn.style.display = issue.state === 'open' ? 'block' : 'none';
+        // Hide header and repo display for more space
+        document.querySelector('.header').style.display = 'none';
+        currentRepoDisplay.style.display = 'none';
+        document.querySelector('.view-tabs').style.display = 'none';
+        renderIssueDetail(issue);
+    }
+
+    function closeIssueDetail() {
+        currentOpenIssue = null;
+        issueDetailPanel.classList.remove('open');
+        issuesListPanel.classList.remove('detail-open');
+        closeConfirm.style.display = 'none';
+        // Show header and repo display again
+        document.querySelector('.header').style.display = 'flex';
+        currentRepoDisplay.style.display = 'block';
+        document.querySelector('.view-tabs').style.display = 'flex';
+    }
+
+    async function renderIssueDetail(issue) {
+        const stateClass = issue.state === 'open' ? 'open' : 'closed';
+        const stateIcon = issue.state === 'open' 
+            ? `<svg class="issue-state-icon open" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                 <path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"></path>
+                 <path fill-rule="evenodd" d="M8 0a8 8 0 100 16A8 8 0 008 0zM1.5 8a6.5 6.5 0 1113 0 6.5 6.5 0 01-13 0z"></path>
+               </svg>`
+            : `<svg class="issue-state-icon closed" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                 <path d="M11.28 6.78a.75.75 0 00-1.06-1.06L7.25 8.69 5.78 7.22a.75.75 0 00-1.06 1.06l2 2a.75.75 0 001.06 0l3.5-3.5z"></path>
+                 <path fill-rule="evenodd" d="M16 8A8 8 0 110 8a8 8 0 0116 0zm-1.5 0a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"></path>
+               </svg>`;
+
+        // Build labels HTML
+        let labelsHtml = '';
+        if (issue.labels && issue.labels.length > 0) {
+            labelsHtml = '<div class="issue-detail-labels">';
+            issue.labels.forEach(label => {
+                const contrast = getContrastYIQ(label.color);
+                labelsHtml += `<span class="issue-label" style="background-color: #${label.color}; color: ${contrast};">${label.name}</span>`;
+            });
+            labelsHtml += '</div>';
+        }
+
+        const timeAgo = getTimeAgo(new Date(issue.created_at));
+        const bodyHtml = issue.body ? escapeHtml(issue.body).replace(/\n/g, '<br>') : '<em>No description provided.</em>';
+
+        issueDetailContent.innerHTML = `
+            <div class="issue-detail-title-row">
+                ${stateIcon}
+                <h3 class="issue-detail-title">${escapeHtml(issue.title)}</h3>
+            </div>
+            <div class="issue-detail-meta">
+                <span class="issue-state-badge ${stateClass}">${issue.state}</span>
+                #${issue.number} opened ${timeAgo} by 
+                <img src="${issue.user.avatar_url}" class="issue-detail-avatar" />
+                <strong>${issue.user.login}</strong>
+            </div>
+            ${labelsHtml}
+            <div class="issue-detail-body">${bodyHtml}</div>
+            <div class="issue-detail-comments-header">Comments (${issue.comments})</div>
+            <div id="issue-comments-list" class="issue-comments-list">
+                ${issue.comments > 0 ? '<div class="issue-loading">Loading comments...</div>' : '<div class="issues-placeholder">No comments yet</div>'}
+            </div>
+        `;
+
+        // Fetch comments if there are any
+        if (issue.comments > 0) {
+            fetchIssueComments(issue.number);
+        }
+    }
+
+    async function fetchIssueComments(issueNumber) {
+        const token = tokenInput.value.trim();
+        const repoFull = repoNameInput.value;
+        const commentsList = document.getElementById('issue-comments-list');
+
+        try {
+            const response = await fetch(
+                `https://api.github.com/repos/${repoFull}/issues/${issueNumber}/comments`,
+                {
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                }
+            );
+
+            if (response.ok) {
+                const comments = await response.json();
+                renderComments(comments, commentsList);
+            } else {
+                commentsList.innerHTML = '<div class="issues-placeholder">Failed to load comments</div>';
+            }
+        } catch (error) {
+            commentsList.innerHTML = '<div class="issues-placeholder">Error loading comments</div>';
+        }
+    }
+
+    function renderComments(comments, container) {
+        if (comments.length === 0) {
+            container.innerHTML = '<div class="issues-placeholder">No comments yet</div>';
+            return;
+        }
+
+        container.innerHTML = '';
+        comments.forEach(comment => {
+            const timeAgo = getTimeAgo(new Date(comment.created_at));
+            const bodyHtml = escapeHtml(comment.body).replace(/\n/g, '<br>');
+            
+            const commentEl = document.createElement('div');
+            commentEl.className = 'issue-comment';
+            commentEl.innerHTML = `
+                <div class="issue-comment-header">
+                    <img src="${comment.user.avatar_url}" class="issue-detail-avatar" />
+                    <strong>${comment.user.login}</strong>
+                    <span class="issue-comment-time">${timeAgo}</span>
+                </div>
+                <div class="issue-comment-body">${bodyHtml}</div>
+            `;
+            container.appendChild(commentEl);
+        });
+    }
+
+    closeIssueDetailBtn.addEventListener('click', closeIssueDetail);
+
+    // Submit comment
+    submitCommentBtn.addEventListener('click', async () => {
+        if (!currentOpenIssue) return;
+        const commentBody = newCommentInput.value.trim();
+        if (!commentBody) {
+            alert('Please enter a comment.');
+            return;
+        }
+        await postComment(currentOpenIssue.number, commentBody);
+    });
+
+    // Close issue with comment
+    closeIssueBtn.addEventListener('click', async () => {
+        if (!currentOpenIssue) return;
+        // Show a nicer inline confirmation instead of browser confirm()
+        closeConfirm.style.display = 'flex';
+    });
+
+    cancelCloseBtn.addEventListener('click', () => {
+        closeConfirm.style.display = 'none';
+    });
+
+    confirmCloseBtn.addEventListener('click', async () => {
+        if (!currentOpenIssue) return;
+        const commentBody = newCommentInput.value.trim();
+        await closeIssueWithComment(currentOpenIssue.number, commentBody);
+    });
+
+    async function postComment(issueNumber, body) {
+        const token = tokenInput.value.trim();
+        const repoFull = repoNameInput.value;
+        submitCommentBtn.disabled = true;
+        submitCommentBtn.textContent = 'Posting...';
+
+        try {
+            const response = await fetch(
+                `https://api.github.com/repos/${repoFull}/issues/${issueNumber}/comments`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ body })
+                }
+            );
+
+            if (response.ok) {
+                newCommentInput.value = '';
+                // Refresh comments
+                fetchIssueComments(issueNumber);
+                // Update comment count in current issue
+                if (currentOpenIssue) currentOpenIssue.comments++;
+            } else {
+                const error = await response.json();
+                alert('Failed to post comment: ' + error.message);
+            }
+        } catch (error) {
+            alert('Network error: ' + error.message);
+        } finally {
+            submitCommentBtn.disabled = false;
+            submitCommentBtn.textContent = 'Comment';
+        }
+    }
+
+    async function closeIssueWithComment(issueNumber, commentBody) {
+        const token = tokenInput.value.trim();
+        const repoFull = repoNameInput.value;
+        closeIssueBtn.disabled = true;
+        confirmCloseBtn.disabled = true;
+        cancelCloseBtn.disabled = true;
+        confirmCloseBtn.textContent = 'Closing...';
+
+        try {
+            // Post comment first if there is one
+            if (commentBody) {
+                await fetch(
+                    `https://api.github.com/repos/${repoFull}/issues/${issueNumber}/comments`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ body: commentBody })
+                    }
+                );
+            }
+
+            // Close the issue
+            const response = await fetch(
+                `https://api.github.com/repos/${repoFull}/issues/${issueNumber}`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ state: 'closed' })
+                }
+            );
+
+            if (response.ok) {
+                newCommentInput.value = '';
+                closeConfirm.style.display = 'none';
+                closeIssueDetail();
+                fetchIssues(true); // Refresh issues list
+            } else {
+                const error = await response.json();
+                alert('Failed to close issue: ' + error.message);
+            }
+        } catch (error) {
+            alert('Network error: ' + error.message);
+        } finally {
+            closeIssueBtn.disabled = false;
+            confirmCloseBtn.disabled = false;
+            cancelCloseBtn.disabled = false;
+            confirmCloseBtn.textContent = 'Close';
+        }
+    }
+    // ---------------------------------
+
+    // Issues event listeners
+    issuesStateFilter.addEventListener('change', () => fetchIssues(true));
+    refreshIssuesBtn.addEventListener('click', () => fetchIssues(true));
+    loadMoreIssuesBtn.addEventListener('click', () => {
+        issuesPage++;
+        fetchIssues(false);
+    });
+    // ----------------------------
 
     // Toggle Dropdown
     repoSelectTrigger.addEventListener('click', () => {
@@ -123,6 +715,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!assigneeSelectTrigger.contains(e.target) && !assigneeSelectDropdown.contains(e.target)) {
             assigneeSelectDropdown.style.display = 'none';
             assigneeSelectTrigger.classList.remove('is-open');
+        }
+        if (!imageRepoSelectTrigger.contains(e.target) && !imageRepoSelectDropdown.contains(e.target)) {
+            imageRepoSelectDropdown.style.display = 'none';
+            imageRepoSelectTrigger.classList.remove('is-open');
         }
     });
 
@@ -314,6 +910,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             fetchLabels(tokenInput.value.trim(), owner, repo);
             fetchAssignees(tokenInput.value.trim(), owner, repo);
+            
+            // Refresh issues if in issues view
+            if (issuesView.style.display !== 'none') {
+                fetchIssues(true);
+            }
         }
     });
 
@@ -522,9 +1123,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Load saved settings
-    chrome.storage.sync.get(['githubToken', 'githubOwner', 'githubRepoName', 'githubAssignees', 'darkMode', 'advancedOptionsOpen'], (items) => {
+    chrome.storage.sync.get(['githubToken', 'githubOwner', 'githubRepoName', 'githubAssignees', 'darkMode', 'advancedOptionsOpen', 'imageToken', 'imageRepo'], (items) => {
         if (items.githubToken) tokenInput.value = items.githubToken;
         if (items.githubOwner) ownerInput.value = items.githubOwner;
+        if (items.imageToken) imageTokenInput.value = items.imageToken;
+        if (items.imageRepo) {
+            imageRepoInput.value = items.imageRepo;
+            // Update select text
+            if (items.imageRepo.includes('/')) {
+                const [, repoName] = items.imageRepo.split('/');
+                imageRepoSelectText.textContent = repoName;
+            } else {
+                imageRepoSelectText.textContent = items.imageRepo;
+            }
+        }
         if (items.githubAssignees) {
             assigneesInput.value = items.githubAssignees;
             items.githubAssignees.split(',').map(s => s.trim()).forEach(s => {
@@ -569,14 +1181,14 @@ document.addEventListener('DOMContentLoaded', () => {
             advancedOptionsDetails.open = true;
         }
 
-        // Auto-collapse settings if configured
-        if (items.githubToken && items.githubRepoName) {
-            settingsDetails.removeAttribute('open');
-        }
-
         // Auto-load repos if token is present
         if (items.githubToken) {
             fetchRepositories(items.githubToken, items.githubOwner);
+        }
+
+        // Auto-refresh issues when opening the extension (only if Issues tab is active)
+        if (restoredActiveTab === 'issues' && items.githubToken && repoNameInput.value) {
+            fetchIssues(true);
         }
     });
 
@@ -593,22 +1205,26 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.storage.sync.set({ darkMode: isDark });
     });
 
-    // Save Settings Button Listener
-    saveSettingsBtn.addEventListener('click', () => {
-        const originalText = saveSettingsBtn.textContent;
-        saveSettingsBtn.disabled = true;
-        saveSettingsBtn.innerHTML = '<span class="spinner"></span> Saving...';
+    // Save Settings Function
+    function saveSettings(btn) {
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Saving...';
 
         const token = tokenInput.value.trim();
         const owner = ownerInput.value.trim();
         const repoFull = repoNameInput.value;
         const assigneesRaw = assigneesInput.value;
+        const imageToken = imageTokenInput.value.trim();
+        const imageRepo = imageRepoInput.value.trim();
 
         chrome.storage.sync.set({
             githubToken: token,
             githubOwner: owner,
             githubRepoName: repoFull,
-            githubAssignees: assigneesRaw
+            githubAssignees: assigneesRaw,
+            imageToken: imageToken,
+            imageRepo: imageRepo
         }, () => {
             if (repoFull) {
                 const [rOwner, rName] = repoFull.split('/');
@@ -618,16 +1234,16 @@ document.addEventListener('DOMContentLoaded', () => {
             showStatus('Settings saved!', 'success');
             
             setTimeout(() => {
-                saveSettingsBtn.innerHTML = originalText;
-                saveSettingsBtn.disabled = false;
+                btn.innerHTML = originalText;
+                btn.disabled = false;
                 statusDiv.innerHTML = '';
-                // Optional: Collapse settings if they are valid
-                if (token && repoFull) {
-                    settingsDetails.removeAttribute('open');
-                }
             }, 1000);
         });
-    });
+    }
+
+    // Save Settings Button Listeners
+    saveSettingsBtn.addEventListener('click', () => saveSettings(saveSettingsBtn));
+    saveImageSettingsBtn.addEventListener('click', () => saveSettings(saveImageSettingsBtn));
 
     // Image Upload Logic
     attachImageBtn.addEventListener('click', () => {
@@ -665,11 +1281,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function uploadImage(file) {
-        const token = tokenInput.value.trim();
-        const repoFull = repoNameInput.value;
+        const mainToken = tokenInput.value.trim();
+        const imageToken = imageTokenInput.value.trim();
+        const imageRepo = imageRepoInput.value.trim();
+        
+        // Use image-specific token if provided, otherwise fall back to main token
+        const token = imageToken || mainToken;
+        // Use image repo if provided, otherwise fall back to main repo
+        const repoFull = imageRepo || repoNameInput.value;
 
         if (!token || !repoFull) {
-            showStatus('Please configure Token and Repo first.', 'error');
+            showStatus('Please configure Token and Image Repo in Settings first.', 'error');
             return;
         }
 
