@@ -4,20 +4,25 @@ A simple and efficient Google Chrome extension that allows you to create GitHub 
 
 ## 🚀 Features
 
-*   **Quick Issue Creation:** Instantly open a popup to draft and submit issues.
-*   **Smart Labels:** Automatically fetches labels from your repository. Select them with a single click using the beautiful, glassy UI.
+*   **Quick Issue Creation:** Instantly open a popup to draft and submit issues with keyboard shortcut support (Ctrl/Cmd + Enter).
+*   **Browse & Manage Issues:** View all open, closed, or all issues in your repository directly from the extension. Filter by state and see issue details including labels, comments, and metadata.
+*   **Comment & Close Issues:** Add comments to existing issues and close them with optional comments—all without leaving your browser.
+*   **Smart Labels:** Automatically fetches labels from your repository. Select them with a single click using the beautiful, searchable dropdown UI with actual GitHub label colors.
+*   **Assignees:** Easily assign team members to issues via a searchable dropdown that fetches contributors from your repository.
 *   **Image Attachments:** 
     *   Click the attach image button to upload images.
     *   **Paste support:** Simply paste (Ctrl+V) images directly into the body text area.
-    *   Images are automatically uploaded to your repo and embedded as Markdown.
+    *   Images are automatically uploaded to GitHub and embedded as Markdown.
+    *   **Dedicated Image Repository:** Optionally configure a separate public repo for image uploads to keep your main project history clean.
+*   **Repository Selector:** Searchable dropdown to quickly switch between your repositories and starred repos, grouped by owner.
+*   **Draft Auto-Save:** Your issue title and body are automatically saved as you type, so you never lose your work. Clear draft with one click.
 *   **Dark Mode:** Fully themed dark mode for late-night coding sessions. 🌙
-*   **Auto-Save Settings:** Remembers your Token, Owner, and Repo so you're always ready to go.
-*   **Assignees:** Easily assign team members to issues.
+*   **Tabbed Interface:** Clean, organized UI with Create, Issues, and Settings tabs for easy navigation.
 *   **Secure:** Your Personal Access Token is stored locally in your browser's sync storage and communicates directly with the GitHub API. No intermediate servers.
 
 ## 📥 Installation
 
-**[Download from the Chrome Web Store](YOUR_WEBSTORE_LINK_HERE)**
+**[Download from the Chrome Web Store](https://chromewebstore.google.com/detail/small-git-issues/hkealndophoaddgmmgeaalecgdeodhol)**
 
 1.  Click the link above to visit the Chrome Web Store.
 2.  Click **Add to Chrome**.
