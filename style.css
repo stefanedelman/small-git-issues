@@ -56,7 +56,7 @@ body.dark-mode {
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    width: 300px;
+    width: 600px;
     padding: 10px;
     background-color: var(--color-bg);
     color: var(--color-text);
@@ -674,13 +674,16 @@ body.dark-mode .issue-loading {
     height: 100%;
     background-color: #fff;
     transform: translateX(-100%);
-    transition: transform 0.25s ease;
+    transition: transform 0.25s ease, visibility 0s 0.25s;
     display: flex;
     flex-direction: column;
+    visibility: hidden;
 }
 
 .issue-detail-panel.open {
     transform: translateX(0);
+    visibility: visible;
+    transition: transform 0.25s ease, visibility 0s 0s;
 }
 
 .issue-detail-header {
