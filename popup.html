@@ -116,6 +116,18 @@
               <option value="closed">Closed</option>
               <option value="all">All</option>
             </select>
+            <div class="custom-select-container issues-filter-select">
+              <div id="issues-assignee-trigger" class="select-trigger">
+                <span id="issues-assignee-text">All Assignees</span>
+                <svg class="arrow" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                  <path d="M12.78 6.22a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L3.22 7.28a.75.75 0 0 1 1.06-1.06L8 9.94l3.72-3.72a.75.75 0 0 1 1.06 0Z"></path>
+                </svg>
+              </div>
+              <div id="issues-assignee-dropdown" class="select-dropdown" style="display: none;">
+                <div id="issues-assignee-options"></div>
+              </div>
+            </div>
+            <input type="hidden" id="issues-assignee-filter" value="" />
             <button id="refresh-issues-btn" class="icon-btn" title="Refresh Issues">&#x21BB; Refresh</button>
           </div>
           <span style="font-size: 0.7rem;">New issues or closed issues might take a minute to update</span>
@@ -160,7 +172,7 @@
         </div>
         <input type="hidden" id="repoName" />
       </div>
-      <button id="save-settings" class="secondary-btn">Save Settings</button>
+      <button id="save-settings" class="secondary-btn">Settings saved</button>
 
       <div class="settings-divider"></div>
       <div class="settings-section-title">Image Upload Settings (Optional)</div>
@@ -191,7 +203,7 @@
         <input type="hidden" id="image-repo" />
         <div class="help-text">Select a repo dedicated to storing images</div>
       </div>
-      <button id="save-image-settings" class="secondary-btn">Save Settings</button>
+      <button id="save-image-settings" class="secondary-btn">Settings saved</button>
     </div>
 
     <!-- Image Info Modal -->

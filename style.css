@@ -232,14 +232,30 @@ button {
 }
 
 .secondary-btn {
-    background-color: var(--color-primary);
+    background-color: var(--color-success);
     margin-bottom: 15px;
     padding: 8px;
     font-size: 13px;
 }
 
 .secondary-btn:hover {
-    background-color: var(--color-primary-hover);
+    background-color: var(--color-success-hover);
+}
+
+.secondary-btn.unsaved {
+    background-color: #dc2626;
+}
+
+.secondary-btn.unsaved:hover {
+    background-color: #b91c1c;
+}
+
+body.dark-mode .secondary-btn.unsaved {
+    background-color: #ef4444;
+}
+
+body.dark-mode .secondary-btn.unsaved:hover {
+    background-color: #dc2626;
 }
 
 button:hover {
@@ -542,8 +558,45 @@ body.dark-mode .tab-btn.active {
     font-size: 12px;
 }
 
+.issues-toolbar .issues-filter-select {
+    flex: 1;
+    min-width: 120px;
+}
+
+.issues-toolbar .issues-filter-select .select-trigger {
+    padding: 6px 8px;
+    font-size: 12px;
+}
+
+.issues-toolbar .issues-filter-select .select-dropdown {
+    min-width: 150px;
+}
+
+#issues-assignee-text {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.assignee-filter-avatar {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+.assignee-filter-option-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .issues-list {
-    max-height: 350px;
+    max-height: 330px;
     overflow-y: auto;
     border: 1px solid #ddd;
     border-radius: 6px;
@@ -704,7 +757,7 @@ body.dark-mode .issue-loading {
     flex: 1;
     overflow-y: auto;
     min-height: 0;
-    max-height: 380px;
+    max-height: 340px;
 }
 
 .issue-detail-title-row {

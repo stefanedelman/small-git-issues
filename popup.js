@@ -66,6 +66,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const issuesView = document.getElementById('issues-view');
     const settingsView = document.getElementById('settings-view');
     const issuesStateFilter = document.getElementById('issues-state-filter');
+    const issuesAssigneeFilter = document.getElementById('issues-assignee-filter');
+    const issuesAssigneeTrigger = document.getElementById('issues-assignee-trigger');
+    const issuesAssigneeText = document.getElementById('issues-assignee-text');
+    const issuesAssigneeDropdown = document.getElementById('issues-assignee-dropdown');
+    const issuesAssigneeOptions = document.getElementById('issues-assignee-options');
     const refreshIssuesBtn = document.getElementById('refresh-issues-btn');
     const issuesList = document.getElementById('issues-list');
     const loadMoreIssuesBtn = document.getElementById('load-more-issues');
@@ -83,6 +88,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentOpenIssue = null; // Track currently open issue
     let restoredActiveTab = 'create';
+
+    // Saved settings tracking
+    let savedSettings = {
+        token: '',
+        owner: '',
+        repoName: ''
+    };
+    let savedImageSettings = {
+        imageToken: '',
+        imageRepo: ''
+    };
 
     // --- Autosave & Draft Logic ---
     chrome.storage.local.get(['draftTitle', 'draftBody'], (items) => {
@@ -266,11 +282,113 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Issues Fetching Logic ---
-    function filterIssuesFromCache(state) {
-        if (state === 'all') {
-            return [...masterIssuesCache];
+    function filterIssuesFromCache(state, assignee = '') {
+        let filtered = [...masterIssuesCache];
+        
+        // Filter by state
+        if (state !== 'all') {
+            filtered = filtered.filter(issue => issue.state === state);
         }
-        return masterIssuesCache.filter(issue => issue.state === state);
+        
+        // Filter by assignee
+        if (assignee) {
+            if (assignee === 'unassigned') {
+                filtered = filtered.filter(issue => !issue.assignees || issue.assignees.length === 0);
+            } else {
+                filtered = filtered.filter(issue => 
+                    issue.assignees && issue.assignees.some(a => a.login === assignee)
+                );
+            }
+        }
+        
+        return filtered;
+    }
+
+    function populateAssigneeFilter() {
+        // Collect unique assignees from cached issues
+        const assigneesMap = new Map();
+        masterIssuesCache.forEach(issue => {
+            if (issue.assignees) {
+                issue.assignees.forEach(a => {
+                    if (!assigneesMap.has(a.login)) {
+                        assigneesMap.set(a.login, a);
+                    }
+                });
+            }
+        });
+        
+        // Save current selection
+        const currentSelection = issuesAssigneeFilter.value;
+        
+        // Clear options
+        issuesAssigneeOptions.innerHTML = '';
+        
+        // Add "All Assignees" option
+        const allOption = document.createElement('div');
+        allOption.className = 'select-option' + (currentSelection === '' ? ' selected' : '');
+        allOption.innerHTML = '<span>All Assignees</span>';
+        allOption.addEventListener('click', () => selectAssigneeFilterOption('', 'All Assignees'));
+        issuesAssigneeOptions.appendChild(allOption);
+        
+        // Add "Unassigned" option
+        const unassignedOption = document.createElement('div');
+        unassignedOption.className = 'select-option' + (currentSelection === 'unassigned' ? ' selected' : '');
+        unassignedOption.innerHTML = '<span>Unassigned</span>';
+        unassignedOption.addEventListener('click', () => selectAssigneeFilterOption('unassigned', 'Unassigned'));
+        issuesAssigneeOptions.appendChild(unassignedOption);
+        
+        // Sort assignees alphabetically
+        const sortedAssignees = Array.from(assigneesMap.values()).sort((a, b) => 
+            a.login.toLowerCase().localeCompare(b.login.toLowerCase())
+        );
+        
+        sortedAssignees.forEach(assignee => {
+            const option = document.createElement('div');
+            option.className = 'select-option' + (currentSelection === assignee.login ? ' selected' : '');
+            
+            const avatar = document.createElement('img');
+            avatar.src = assignee.avatar_url;
+            avatar.className = 'assignee-filter-avatar';
+            avatar.alt = assignee.login;
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = assignee.login;
+            
+            const leftContent = document.createElement('div');
+            leftContent.className = 'assignee-filter-option-content';
+            leftContent.appendChild(avatar);
+            leftContent.appendChild(nameSpan);
+            
+            option.appendChild(leftContent);
+            option.addEventListener('click', () => selectAssigneeFilterOption(assignee.login, assignee.login, assignee.avatar_url));
+            issuesAssigneeOptions.appendChild(option);
+        });
+    }
+    
+    function selectAssigneeFilterOption(value, displayText, avatarUrl = null) {
+        issuesAssigneeFilter.value = value;
+        
+        // Update trigger text with optional avatar
+        if (avatarUrl) {
+            issuesAssigneeText.innerHTML = `<img src="${avatarUrl}" class="assignee-filter-avatar" alt="${displayText}" /><span>${displayText}</span>`;
+        } else {
+            issuesAssigneeText.innerHTML = `<span>${displayText}</span>`;
+        }
+        
+        // Close dropdown
+        issuesAssigneeDropdown.style.display = 'none';
+        issuesAssigneeTrigger.classList.remove('is-open');
+        
+        // Update selected state
+        issuesAssigneeOptions.querySelectorAll('.select-option').forEach(opt => opt.classList.remove('selected'));
+        
+        // Trigger filter
+        if (masterIssuesCache.length > 0) {
+            allFetchedIssues = filterIssuesFromCache(issuesStateFilter.value, issuesAssigneeFilter.value);
+            renderIssuesList();
+        } else {
+            fetchIssues(true);
+        }
     }
 
     async function fetchIssues(reset = false, forceRefresh = false) {
@@ -283,10 +401,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const state = issuesStateFilter.value;
+        const assignee = issuesAssigneeFilter.value;
 
         // If we have cached data and just changing filter (not forcing refresh), filter client-side
         if (!forceRefresh && masterIssuesCache.length > 0 && lastFetchedState === 'all') {
-            allFetchedIssues = filterIssuesFromCache(state);
+            allFetchedIssues = filterIssuesFromCache(state, assignee);
             renderIssuesList();
             return;
         }
@@ -294,6 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (reset) {
             issuesPage = 1;
             allFetchedIssues = [];
+            masterIssuesCache = [];
             hasMoreIssues = true;
         }
 
@@ -301,10 +421,9 @@ document.addEventListener('DOMContentLoaded', () => {
         loadMoreIssuesBtn.style.display = 'none';
 
         try {
-            // Always fetch 'all' to enable client-side filtering
-            const fetchState = 'all';
+            // Fetch 50 issues per page
             const response = await fetch(
-                `https://api.github.com/repos/${repoFull}/issues?state=${fetchState}&per_page=50&page=${issuesPage}`,
+                `https://api.github.com/repos/${repoFull}/issues?state=all&per_page=50&page=${issuesPage}`,
                 {
                     headers: {
                         'Authorization': `token ${token}`,
@@ -325,8 +444,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 lastFetchedState = 'all';
 
+                // Populate assignee filter dropdown
+                populateAssigneeFilter();
+
                 // Apply current filter
-                allFetchedIssues = filterIssuesFromCache(state);
+                allFetchedIssues = filterIssuesFromCache(state, assignee);
                 hasMoreIssues = issues.length === 50;
                 renderIssuesList();
             } else {
@@ -697,12 +819,28 @@ document.addEventListener('DOMContentLoaded', () => {
     issuesStateFilter.addEventListener('change', () => {
         // Try client-side filtering first, only fetch if no cache
         if (masterIssuesCache.length > 0) {
-            allFetchedIssues = filterIssuesFromCache(issuesStateFilter.value);
+            allFetchedIssues = filterIssuesFromCache(issuesStateFilter.value, issuesAssigneeFilter.value);
             renderIssuesList();
         } else {
             fetchIssues(true);
         }
     });
+    
+    // Custom assignee filter dropdown toggle
+    issuesAssigneeTrigger.addEventListener('click', () => {
+        const isClosed = issuesAssigneeDropdown.style.display === 'none';
+        issuesAssigneeDropdown.style.display = isClosed ? 'block' : 'none';
+        issuesAssigneeTrigger.classList.toggle('is-open', isClosed);
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!issuesAssigneeTrigger.contains(e.target) && !issuesAssigneeDropdown.contains(e.target)) {
+            issuesAssigneeDropdown.style.display = 'none';
+            issuesAssigneeTrigger.classList.remove('is-open');
+        }
+    });
+    
     refreshIssuesBtn.addEventListener('click', () => fetchIssues(true, true)); // Force refresh from API
     loadMoreIssuesBtn.addEventListener('click', () => {
         issuesPage++;
@@ -959,6 +1097,11 @@ document.addEventListener('DOMContentLoaded', () => {
             allFetchedIssues = [];
             lastFetchedState = null;
             
+            // Reset assignee filter dropdown
+            issuesAssigneeFilter.value = '';
+            issuesAssigneeText.innerHTML = '<span>All Assignees</span>';
+            issuesAssigneeOptions.innerHTML = '';
+            
             fetchLabels(tokenInput.value.trim(), owner, repo);
             fetchAssignees(tokenInput.value.trim(), owner, repo);
             
@@ -1173,6 +1316,43 @@ document.addEventListener('DOMContentLoaded', () => {
         statusDiv.className = type;
     }
 
+    // Check for unsaved settings changes
+    function checkUnsavedSettings() {
+        const hasChanges = 
+            tokenInput.value.trim() !== savedSettings.token ||
+            ownerInput.value.trim() !== savedSettings.owner ||
+            repoNameInput.value !== savedSettings.repoName;
+        
+        if (hasChanges) {
+            saveSettingsBtn.classList.add('unsaved');
+            saveSettingsBtn.textContent = 'Settings not saved. Click to save.';
+        } else {
+            saveSettingsBtn.classList.remove('unsaved');
+            saveSettingsBtn.textContent = 'Settings Saved';
+        }
+    }
+
+    function checkUnsavedImageSettings() {
+        const hasChanges = 
+            imageTokenInput.value.trim() !== savedImageSettings.imageToken ||
+            imageRepoInput.value.trim() !== savedImageSettings.imageRepo;
+        
+        if (hasChanges) {
+            saveImageSettingsBtn.classList.add('unsaved');
+            saveImageSettingsBtn.textContent = 'Settings not saved. Click to save.';
+        } else {
+            saveImageSettingsBtn.classList.remove('unsaved');
+            saveImageSettingsBtn.textContent = 'Settings Saved';
+        }
+    }
+
+    // Attach listeners to detect changes
+    tokenInput.addEventListener('input', checkUnsavedSettings);
+    ownerInput.addEventListener('input', checkUnsavedSettings);
+    repoNameInput.addEventListener('change', checkUnsavedSettings);
+    imageTokenInput.addEventListener('input', checkUnsavedImageSettings);
+    imageRepoInput.addEventListener('change', checkUnsavedImageSettings);
+
     // Load saved settings
     chrome.storage.sync.get(['githubToken', 'githubOwner', 'githubRepoName', 'githubAssignees', 'darkMode', 'advancedOptionsOpen', 'imageToken', 'imageRepo'], (items) => {
         if (items.githubToken) tokenInput.value = items.githubToken;
@@ -1188,6 +1368,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 imageRepoSelectText.textContent = items.imageRepo;
             }
         }
+        
+        // Track saved settings
+        savedSettings.token = items.githubToken || '';
+        savedSettings.owner = items.githubOwner || '';
+        savedImageSettings.imageToken = items.imageToken || '';
+        savedImageSettings.imageRepo = items.imageRepo || '';
         if (items.githubAssignees) {
             assigneesInput.value = items.githubAssignees;
             items.githubAssignees.split(',').map(s => s.trim()).forEach(s => {
@@ -1212,6 +1398,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update Custom Select UI
             repoNameInput.value = fullRepoValue;
             repoSelectText.textContent = repo;
+            savedSettings.repoName = fullRepoValue;
 
             updateRepoDisplay(owner, repo);
             
@@ -1277,6 +1464,19 @@ document.addEventListener('DOMContentLoaded', () => {
             imageToken: imageToken,
             imageRepo: imageRepo
         }, () => {
+            // Update saved settings tracking
+            savedSettings.token = token;
+            savedSettings.owner = owner;
+            savedSettings.repoName = repoFull;
+            savedImageSettings.imageToken = imageToken;
+            savedImageSettings.imageRepo = imageRepo;
+            
+            // Hide unsaved indicators
+            saveSettingsBtn.classList.remove('unsaved');
+            saveSettingsBtn.textContent = 'Settings saved';
+            saveImageSettingsBtn.classList.remove('unsaved');
+            saveImageSettingsBtn.textContent = 'Settings saveds';
+            
             if (repoFull) {
                 const [rOwner, rName] = repoFull.split('/');
                 updateRepoDisplay(rOwner, rName);
@@ -1285,7 +1485,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showStatus('Settings saved!', 'success');
             
             setTimeout(() => {
-                btn.innerHTML = originalText;
+                btn.textContent = 'Settings saved';
                 btn.disabled = false;
                 statusDiv.innerHTML = '';
             }, 1000);
